@@ -88,3 +88,20 @@ WORD32 ih264d_detect_first_mb_slice(UWORD8 u1_is_idr_slice,
 
     return 0;
 }
+
+WORD32 ihevcd_detect_first_slice_segment_in_pic(
+	dec_struct_t *ps_dec /* Decoder parameters */
+)
+{
+	dec_bit_stream_t * ps_bitstrm = ps_dec->ps_bitstrm;
+	UWORD8 u1_first_slice_segment_in_pic_flag;
+	UWORD32 *pu4_bitstrm_buf = ps_bitstrm->pu4_buffer;
+	UWORD32 *pu4_bitstrm_ofst = &ps_bitstrm->u4_ofst;
+
+	/* read FirstSliceSegmentInPicFlag*/
+	u1_first_slice_segment_in_pic_flag = ih264d_get_bit_h264(ps_bitstrm);
+
+	ps_dec->u1_first_slice_segment_in_pic_flag = u1_first_slice_segment_in_pic_flag;
+
+	return 0;
+}

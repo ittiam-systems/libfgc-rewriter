@@ -58,7 +58,7 @@
 #define NUM_OF_ZERO_BYTES_BEFORE_START_CODE 2
 #define EMULATION_PREVENTION_BYTE           0x03
 
-#define NAL_FIRST_BYTE_SIZE 1
+#define NAL_FIRST_BYTE_SIZE 2
 
 /*!
  **************************************************************************
@@ -92,7 +92,7 @@ void ih264d_check_if_aud(UWORD8 *pu1_buf,
         u1_first_byte = pu1_buf[u4_cur_pos + 1];
         u1_nal_unit_type = NAL_UNIT_TYPE(u1_first_byte);
 
-        if(u1_nal_unit_type == ACCESS_UNIT_DELIMITER_RBSP)
+        if(u1_nal_unit_type == NAL_AUD)
         {
             *pu4_next_is_aud = 1;
         }
@@ -150,7 +150,8 @@ WORD32 ih264d_find_start_code(UWORD8 *pu1_buf,
         u4_cur_pos++;
     }
 
-    return (u4_cur_pos - zero_byte_cnt - ui_curPosTemp); //(START_CODE_NOT_FOUND);
+    //return (u4_cur_pos - zero_byte_cnt - ui_curPosTemp); //(START_CODE_NOT_FOUND);
+	return (u4_cur_pos - ui_curPosTemp); //(START_CODE_NOT_FOUND);
 }
 
 /*!
@@ -189,7 +190,7 @@ WORD32 ih264d_process_nal_unit(dec_bit_stream_t *ps_bitstrm,
     ps_bitstrm->pu4_buffer = puc_bitstream_buffer;
 
     /*--------------------------------------------------------------------*/
-    /* First Byte of the NAL Unit                                         */
+    /* First Two Bytes of the NAL Unit (Header)                                         */
     /*--------------------------------------------------------------------*/
 
     ui_word = *pu1_nal_unit++;
@@ -328,6 +329,9 @@ WORD32 ih264d_process_nal_unit(dec_bit_stream_t *ps_bitstrm,
     *puc_bitstream_buffer = (ui_word
                     << ((3 - (((u4_num_bytes_in_rbsp << 30) >> 30))) << 3));
     ps_bitstrm->u4_ofst = 0;
+
+	u4_num_bytes_in_rbsp--; //Since 1 more byte is used for Header in HEVC
+
     ps_bitstrm->u4_max_ofst = ((u4_num_bytes_in_rbsp + NAL_FIRST_BYTE_SIZE) << 3);
 
     return (u4_num_bytes_in_rbsp);

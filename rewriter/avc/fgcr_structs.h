@@ -75,9 +75,12 @@ typedef struct _DecStruct
     dec_bit_stream_t *ps_upd_bitstrm;
     //Add new buffer?
     UWORD16 u2_first_mb_in_slice; /** Address of first MB in slice*/
+	UWORD8 u1_first_slice_segment_in_pic_flag;
 
     /* These things need to be updated at each MbLevel */
     UWORD8 u1_nal_unit_type;
+
+	UWORD8 u1_nuh_temporal_id_plus1;
 
     /* slice Header Simplification */
     WORD32 i4_error_code;

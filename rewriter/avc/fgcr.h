@@ -481,7 +481,7 @@ typedef struct
     /* Component model values for each intensity interval */
     UWORD32 u4_comp_model_value[MAX_NUM_COMP][MAX_NUM_INTENSITIES][MAX_NUM_MODEL_VALUES];
     /* To be 0:  Persistence of the film grain characteristics */
-    UWORD32 u4_film_grain_characteristics_repetition_period;
+    UWORD32 u1_film_grain_characteristics_persistence_flag;
 }fgcr_ctl_set_fgc_params_t;
 
 typedef struct

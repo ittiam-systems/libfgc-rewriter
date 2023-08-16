@@ -60,24 +60,65 @@
 
 #define NAL_REF_IDC(nal_first_byte)       ((nal_first_byte >> 5) & 0x3)
 #define NAL_FORBIDDEN_BIT(nal_first_byte) (nal_first_byte>>7)
-#define NAL_UNIT_TYPE(nal_first_byte)     (nal_first_byte & 0x1F)
+#define NAL_UNIT_TYPE(nal_first_byte)     ((nal_first_byte & 0x7E)>>1)
+#define NUH_TEMPORAL_ID_PLUS1(nal_second_byte)     (nal_second_byte & 0x7)
 
 #define OK        0
 #define NOT_OK    -1
 
 /** NAL Types */
-#define SLICE_NAL                       1
-#define SLICE_DATA_PARTITION_A_NAL      2
-#define SLICE_DATA_PARTITION_B_NAL      3
-#define SLICE_DATA_PARTITION_C_NAL      4
-#define IDR_SLICE_NAL                   5
-#define SEI_NAL                         6
-#define SEQ_PARAM_NAL                   7
-#define PIC_PARAM_NAL                   8
-#define ACCESS_UNIT_DELIMITER_RBSP      9
-#define END_OF_SEQ_RBSP                 10
-#define END_OF_STREAM_RBSP              11
-#define FILLER_DATA_NAL                 12
+//#define SLICE_NAL                       1
+//#define SLICE_DATA_PARTITION_A_NAL      2
+//#define SLICE_DATA_PARTITION_B_NAL      3
+//#define SLICE_DATA_PARTITION_C_NAL      4
+//#define IDR_SLICE_NAL                   5
+//#define SEI_NAL                         6
+//#define SEQ_PARAM_NAL                   7
+//#define PIC_PARAM_NAL                   8
+//#define ACCESS_UNIT_DELIMITER_RBSP      9
+//#define END_OF_SEQ_RBSP                 10
+//#define END_OF_STREAM_RBSP              11
+//#define FILLER_DATA_NAL                 12
+#define NAL_TRAIL_N                       0
+#define NAL_TRAIL_R                       1
+#define NAL_TSA_N                         2
+#define NAL_TSA_R                         3
+#define NAL_STSA_N                        4
+#define NAL_STSA_R                        5
+#define NAL_RADL_N                        6
+#define NAL_RADL_R                        7
+#define NAL_RASL_N                        8
+#define NAL_RASL_R                        9
+#define NAL_RSV_VCL_N10                   10
+#define NAL_RSV_VCL_N12                   12
+#define NAL_RSV_VCL_N14                   14
+#define NAL_RSV_VCL_R11                   11
+#define NAL_RSV_VCL_R13                   13
+#define NAL_RSV_VCL_R15                   15
+#define NAL_BLA_W_LP                      16
+#define NAL_BLA_W_DLP                     17
+#define NAL_BLA_N_LP                      18
+#define NAL_IDR_W_LP                      19
+#define NAL_IDR_N_LP                      20
+#define NAL_CRA                           21
+#define NAL_RSV_RAP_VCL22                 22
+#define NAL_RSV_RAP_VCL23                 23
+#define NAL_RSV_VCL24                     24
+#define NAL_RSV_VCL31                     31
+#define NAL_VPS                           32
+#define NAL_SPS                           33
+#define NAL_PPS                           34
+#define NAL_AUD                           35
+#define NAL_EOS                           36
+#define NAL_EOB                           37
+#define NAL_FD                            38
+#define NAL_PREFIX_SEI                    39
+#define NAL_SUFFIX_SEI                    40
+#define NAL_RSV_NVCL41                    41
+#define NAL_RSV_NVCL47                    47
+#define NAL_UNSPEC48                      48
+#define NAL_UNSPEC63                      49
+
 
 /** Picture Types */
 #define I_PIC       0

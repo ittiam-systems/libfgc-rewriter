@@ -818,7 +818,7 @@ IV_API_CALL_STATUS_T fgcr_video_rewrite(iv_obj_t *dec_hdl, void *pv_api_ip, void
 
 		ps_dec_op->pv_stream_out_buffer = ps_dec_ip->pv_stream_out_buffer;
 
-		ret = ih264d_parse_nal_unit_for_rewriter(dec_hdl, ps_dec_op, pu1_bitstrm_buf, &pu1_upd_bitstrm_buf, buflen);
+		ret = ih264d_parse_nal_unit_for_rewriter(dec_hdl, ps_dec_op, pu1_bitstrm_buf, &pu1_upd_bitstrm_buf, buflen, u4_length_of_start_code);
 
 		if (ret != OK)
 		{
@@ -1237,11 +1237,11 @@ WORD32 error_check_FGS(fgcr_set_fgc_params_t *ps_fgc_param)
 			}
 		}
 
-		if (0 != ps_fgc_param->u4_film_grain_characteristics_repetition_period)
-		{
-			printf("Error: Invalid value for film_grain_characteristics_repetition_period");
-			return IV_FAIL;
-		}
+		//if (0 != ps_fgc_param->u4_film_grain_characteristics_repetition_period)
+		//{
+		//	printf("Error: Invalid value for film_grain_characteristics_repetition_period");
+		//	return IV_FAIL;
+		//}
 	}
 	return 0;
 }

@@ -177,7 +177,7 @@ typedef enum
 	INTENSITY_INTERVAL_LOWER_BOUND,
 	INTENSITY_INTERVAL_UPPER_BOUND,
 	COMP_MODEL_VALUE,
-	FILM_GRAIN_CHARACTERISTICS_REPETITION_PERIOD,
+	FILM_GRAIN_CHARACTERISTICS_PERSISTENCE_FLAG,
 } ARGUMENT_T;
 
 typedef struct
@@ -733,8 +733,8 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 	}
 	break;
 
-	case FILM_GRAIN_CHARACTERISTICS_REPETITION_PERIOD:
-		sscanf(value, "%d", &ps_app_ctx->s_fgs_prms.u4_film_grain_characteristics_repetition_period);
+	case FILM_GRAIN_CHARACTERISTICS_PERSISTENCE_FLAG:
+		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_characteristics_persistence_flag);
 		break;
 	case INVALID:
 	default:
@@ -1263,6 +1263,10 @@ int main(WORD32 argc, CHAR *argv[])
 				if (peak_avg > peak_avg_max)
 					peak_avg_max = peak_avg;
 				frm_cnt++;
+				if (frm_cnt == 301)
+				{
+					int debugging = 0;
+				}
 				u8_op_frm_ts++;
 				printf("framenum: %4d timetaken(microsec): %6d avgtime: %6d peakavgtimemax: %6d numbytesconsumed: %6d numbytesgenerated: %6d \n", frm_cnt, s_elapsed_time, u4_tot_cycles / frm_cnt, peak_avg_max, s_video_decode_op.u4_num_bytes_consumed, s_video_decode_op.u4_num_bytes_generated);
 			}
