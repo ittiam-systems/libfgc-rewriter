@@ -338,6 +338,7 @@ WORD32 ih264d_parse_sei_payload(dec_bit_stream_t *ps_bitstrm,
     {
         case SEI_FILM_GRAIN_CHARACTERISTICS:
             //Update the new buffer added in ps_dec buffer
+			ps_dec->FGC_before_IDR_CRA_present = 1;
          	ih264d_parse_fgc_params(ps_bitstrm, ps_dec,u4_payload_size);
 		 	ps_dec->ps_sei->u1_is_valid = 1;
             if (ps_dec->u4_fgs_enable_rewriter)
@@ -361,6 +362,7 @@ WORD32 ih264d_parse_sei_payload(dec_bit_stream_t *ps_bitstrm,
             }
             else 
 			{
+				ps_dec->FGC_before_IDR_CRA_present = 0;
                 ps_dec->u4_num_bytes_updated = 0;
             }
 

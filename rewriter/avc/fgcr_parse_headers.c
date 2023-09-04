@@ -251,18 +251,32 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
 				case NAL_BLA_W_LP:
 				case NAL_BLA_W_DLP:
 				case NAL_BLA_N_LP:
-				case NAL_CRA:
 				case NAL_RSV_RAP_VCL22:
 				case NAL_RSV_RAP_VCL23:
 				case NAL_RSV_VCL24:
 				case NAL_RSV_VCL31:
+
+					ps_dec->FGC_before_IDR_CRA_present = 0;
+					*pu1_upd_buf += u4_length;
+					ps_dec_op->u4_num_bytes_generated += u4_length;
+					i4_bits_left_in_cw -= (u4_length << 3);
+					while (i4_bits_left_in_cw <= 0)
+					{
+						i4_bits_left_in_cw += WORD_SIZE;
+					}
+					if (i4_bits_left_in_cw > 32)
+					{
+						//Do nothing
+					}
 					break;
 				
 				case NAL_IDR_W_LP:
 				case NAL_IDR_N_LP:
+				case NAL_CRA:
 					break;
                 default:
 
+					ps_dec->FGC_before_IDR_CRA_present = 0;
                     *pu1_upd_buf += u4_length;
                     ps_dec_op->u4_num_bytes_generated += u4_length;
                     i4_bits_left_in_cw -= (u4_length << 3);
@@ -291,7 +305,7 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
 
           //      case IDR_SLICE_NAL:
           //      case SLICE_NAL:
-				case NAL_TRAIL_N:
+				/*case NAL_TRAIL_N:
 				case NAL_TRAIL_R:
 				case NAL_TSA_N:
 				case NAL_TSA_R:
@@ -310,13 +324,13 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
 				case NAL_BLA_W_LP:
 				case NAL_BLA_W_DLP:
 				case NAL_BLA_N_LP:
-				case NAL_CRA:
 				case NAL_RSV_RAP_VCL22:
 				case NAL_RSV_RAP_VCL23:
 				case NAL_RSV_VCL24:
-				case NAL_RSV_VCL31:
+				case NAL_RSV_VCL31:*/
 				case NAL_IDR_W_LP:
 				case NAL_IDR_N_LP:
+				case NAL_CRA:
 
                     /* ! */
                     if (!ps_dec->i4_decode_header)
@@ -346,7 +360,8 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                             if ((ps_dec->u1_first_slice_segment_in_pic_flag == 1) && (ps_dec->u4_fgs_enable_rewriter))
                             {
                                 ps_dec->frm_counts++;
-                                if (ps_dec->frm_counts == ps_dec->frm_SEI_counts)
+                                /*if (ps_dec->frm_counts == ps_dec->frm_SEI_counts)*/
+								if(ps_dec->FGC_before_IDR_CRA_present == 1)
                                 {
                                     *pu1_upd_buf += u4_length;
                                     ps_dec_op->u4_num_bytes_generated += u4_length;
@@ -357,7 +372,8 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                                     }
                                 }
                                 //Either SEI or FGS is not present
-                                else if ((ps_dec->frm_counts - 1) == ps_dec->frm_SEI_counts)
+                                //else if ((ps_dec->frm_counts - 1) == ps_dec->frm_SEI_counts)
+								else
                                 {
                                     UWORD8 *temp_holder = ps_dec->temp_mem_holder;
                                     memcpy(temp_holder, *pu1_upd_buf - u4_length_of_start_code, u4_length + u4_length_of_start_code);
@@ -381,10 +397,10 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                                     ps_dec_op->u4_num_bytes_generated +=
 										u4_length + 4 + ps_bitstream.u4_strm_buf_offset;
                                 }
-                                else
+                                /*else
                                 {
                                     return NOT_OK;
-                                }
+                                }*/
                             }
                             else
                             {
@@ -409,6 +425,7 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                         *pu1_upd_buf += u4_length;
                         ps_dec_op->u4_num_bytes_generated += u4_length;
                     }
+					ps_dec->FGC_before_IDR_CRA_present = 0;
                     break;
 
                 case NAL_PREFIX_SEI:

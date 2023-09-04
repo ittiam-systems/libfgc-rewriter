@@ -133,6 +133,7 @@ typedef struct _DecStruct
     UWORD32 u4_num_bytes_updated;
     WORD32 frm_counts;
     WORD32 frm_SEI_counts;
+	WORD32 FGC_before_IDR_CRA_present;
     WORD8  is_fgs_rewrite_succ;
 } dec_struct_t;
 
