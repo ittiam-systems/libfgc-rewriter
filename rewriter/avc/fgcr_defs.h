@@ -55,30 +55,37 @@
  ************************************************************************
  */
 
+/* codec type */
+#define AVC 1
+#define HEVC 2
+
 /** Bit manipulation macros */
 #define CHECKBIT(a,i) ((a) &  (1 << i))
 
 #define NAL_REF_IDC(nal_first_byte)       ((nal_first_byte >> 5) & 0x3)
 #define NAL_FORBIDDEN_BIT(nal_first_byte) (nal_first_byte>>7)
-#define NAL_UNIT_TYPE(nal_first_byte)     ((nal_first_byte & 0x7E)>>1)
+#define NAL_UNIT_TYPE_AVC(nal_first_byte)     (nal_first_byte & 0x1F)
+#define NAL_UNIT_TYPE_HEVC(nal_first_byte)     ((nal_first_byte & 0x7E)>>1)
 #define NUH_TEMPORAL_ID_PLUS1(nal_second_byte)     (nal_second_byte & 0x7)
 
 #define OK        0
 #define NOT_OK    -1
 
-/** NAL Types */
-//#define SLICE_NAL                       1
-//#define SLICE_DATA_PARTITION_A_NAL      2
-//#define SLICE_DATA_PARTITION_B_NAL      3
-//#define SLICE_DATA_PARTITION_C_NAL      4
-//#define IDR_SLICE_NAL                   5
-//#define SEI_NAL                         6
-//#define SEQ_PARAM_NAL                   7
-//#define PIC_PARAM_NAL                   8
-//#define ACCESS_UNIT_DELIMITER_RBSP      9
-//#define END_OF_SEQ_RBSP                 10
-//#define END_OF_STREAM_RBSP              11
-//#define FILLER_DATA_NAL                 12
+/** NAL Types - AVC */
+#define SLICE_NAL                       1
+#define SLICE_DATA_PARTITION_A_NAL      2
+#define SLICE_DATA_PARTITION_B_NAL      3
+#define SLICE_DATA_PARTITION_C_NAL      4
+#define IDR_SLICE_NAL                   5
+#define SEI_NAL                         6
+#define SEQ_PARAM_NAL                   7
+#define PIC_PARAM_NAL                   8
+#define ACCESS_UNIT_DELIMITER_RBSP      9
+#define END_OF_SEQ_RBSP                 10
+#define END_OF_STREAM_RBSP              11
+#define FILLER_DATA_NAL                 12
+
+/** NAL Types - HEVC */
 #define NAL_TRAIL_N                       0
 #define NAL_TRAIL_R                       1
 #define NAL_TSA_N                         2

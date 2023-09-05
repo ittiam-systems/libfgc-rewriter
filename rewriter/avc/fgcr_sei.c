@@ -89,6 +89,8 @@ WORD32 ih264d_parse_fgc_params(dec_bit_stream_t *ps_bitstrm,
 	UWORD32 i;
 	UWORD32 j;
 
+	UWORD8 codec = ps_dec->codec;
+
 	ps_sei->s_fgc_params.u4_fgc_sei_present_flag = 0;
 
 	if ((ps_dec == NULL) || (ps_sei == NULL))
@@ -242,16 +244,21 @@ WORD32 ih264d_parse_fgc_params(dec_bit_stream_t *ps_bitstrm,
 			}
 		}
 
-		/*ps_sei->s_fgc_params.u4_film_grain_characteristics_repetition_period =
-			(UWORD32)ih264d_uev(pu4_bitstrm_ofst, pu4_bitstrm_buf);
-
-		if (ps_sei->s_fgc_params.u4_film_grain_characteristics_repetition_period < 0 ||
-			ps_sei->s_fgc_params.u4_film_grain_characteristics_repetition_period > 16384)
+		if (codec == AVC)
 		{
-			return 0;
-		}*/
+			ps_sei->s_fgc_params.u4_film_grain_characteristics_repetition_period =
+				(UWORD32)ih264d_uev(pu4_bitstrm_ofst, pu4_bitstrm_buf);
 
-		ps_sei->s_fgc_params.u1_film_grain_characteristics_persistence_flag = (UWORD8)ih264d_get_bit_h264(ps_bitstrm);
+			if (ps_sei->s_fgc_params.u4_film_grain_characteristics_repetition_period < 0 ||
+				ps_sei->s_fgc_params.u4_film_grain_characteristics_repetition_period > 16384)
+			{
+				return 0;
+			}
+		}
+		else if (codec == HEVC)
+		{
+			ps_sei->s_fgc_params.u1_film_grain_characteristics_persistence_flag = (UWORD8)ih264d_get_bit_h264(ps_bitstrm);
+		}
 
 		ps_sei->s_fgc_params.u4_fgc_sei_present_flag = 1;
 	}
@@ -333,6 +340,7 @@ WORD32 ih264d_parse_sei_payload(dec_bit_stream_t *ps_bitstrm,
                                 dec_struct_t *ps_dec)
 {
     WORD32 i4_status = 0;
+	UWORD8 codec = ps_dec->codec;
 
     switch(ui4_payload_type)
     {
@@ -352,7 +360,14 @@ WORD32 ih264d_parse_sei_payload(dec_bit_stream_t *ps_bitstrm,
                 ps_bitstream.i4_zero_bytes_run = 0;
                 ps_bitstream.u4_max_strm_size = 10000;
                 i_status = update_FGS_rewrite_str(ps_dec);
-                i_status = i264_generate_sei_message(&ps_bitstream, ps_dec->s_fgs_rewrite_prms, (ps_dec->u1_nuh_temporal_id_plus1 - 1));
+				if (codec == AVC)
+				{
+					i_status = i264_generate_sei_message(&ps_bitstream, ps_dec->s_fgs_rewrite_prms);
+				}
+				else if (codec == HEVC)
+				{
+					i_status = i265_generate_sei_message(&ps_bitstream, ps_dec->s_fgs_rewrite_prms, (ps_dec->u1_nuh_temporal_id_plus1 - 1));
+				}
                 if (i_status != OK)
                 {
                     return i_status;
@@ -475,7 +490,27 @@ WORD32 ih264d_parse_sei_message(dec_struct_t *ps_dec,
 *
 ******************************************************************************
 */
+
 static WORD32 i264_generate_nal_unit_header(bitstrm_t *ps_bitstrm,
+	WORD32 nal_unit_type,
+	WORD32 nal_ref_idc)
+{
+	WORD32 return_status = IV_SUCCESS;
+
+	/* sanity checks */
+	ASSERT((nal_unit_type > 0) && (nal_unit_type < 32));
+
+	/* forbidden_zero_bit + nal_ref_idc + nal_unit_type */
+	PUT_BITS(ps_bitstrm,
+		((nal_ref_idc << 5) + nal_unit_type),
+		(1 + 2 + 5), /*1 forbidden zero bit + 2 nal_ref_idc + 5 nal_unit_type */
+		return_status,
+		"nal_unit_header");
+
+	return(return_status);
+}
+
+static WORD32 i265_generate_nal_unit_header(bitstrm_t *ps_bitstrm,
     WORD32 nal_unit_type,
     WORD32 nuh_temporal_id)
 {
@@ -509,7 +544,231 @@ static WORD32 i264_generate_nal_unit_header(bitstrm_t *ps_bitstrm,
     return(return_status);
 }
 
-WORD32 i264_generate_sei_message(bitstrm_t *ps_bitstrm, fgcr_set_fgc_params_t *ps_fgs_prms, UWORD8 num_temporal_id)
+WORD32 i264_generate_sei_message(bitstrm_t *ps_bitstrm, fgcr_set_fgc_params_t *ps_fgs_prms)
+{
+	WORD32 return_status = IV_SUCCESS;
+	WORD32 i4_payload_size = 0;
+	WORD32 c, i, j;
+
+	{
+		//Calculating payload size
+		i4_payload_size++;   //For film_grain_characteristics_cancel_flag
+
+		if (!ps_fgs_prms->u1_film_grain_characteristics_cancel_flag)
+		{
+			/** film_grain_model_id*/
+			i4_payload_size += 2;
+			/** separate_colour_description_present_flag*/
+			i4_payload_size += 1;
+			if (ps_fgs_prms->u1_separate_colour_description_present_flag)
+			{
+				/**film_grain_bit_depth_luma_minus8*/
+				i4_payload_size += 3;
+				/** film_grain_bit_depth_chroma_minus8 */
+				i4_payload_size += 3;
+				/** film_grain_full_range_flag */
+				i4_payload_size += 1;
+				/** film_grain_colour_primaries */
+				i4_payload_size += 8;
+				/** film_grain_transfer_characteristics */
+				i4_payload_size += 8;
+				/** film_grain_matrix_coefficients */
+				i4_payload_size += 8;
+			}
+			//fgs_blending_mode_id
+			i4_payload_size += 2;
+			//fgs_log2_scale_factor
+			i4_payload_size += 4;
+			for (c = 0; c < MAX_NUM_COMP; c++)
+			{
+				//fgs_comp_model_present_flag
+				i4_payload_size += 1;
+			}
+			for (c = 0; c < MAX_NUM_COMP; c++)
+			{
+				if (ps_fgs_prms->u1_comp_model_present_flag[c])
+				{
+					/** fgs_num_intensity_intervals_minus1 */
+					i4_payload_size += 8;
+					/** fgs_num_model_values_minus1 */
+					i4_payload_size += 3;
+
+					for (i = 0; i <= ps_fgs_prms->u1_num_intensity_intervals_minus1[c]; i++)
+					{
+						/** fgs_intensity_interval_lower_bound */
+						i4_payload_size += 8;
+						/** fgs_intensity_interval_upper_bound */
+						i4_payload_size += 8;
+
+						for (j = 0; j <= ps_fgs_prms->u1_num_model_values_minus1[c]; j++)
+						{
+							/** fgs_comp_model_value */
+							UWORD32 u4_range;
+							WORD32  i4_val = (WORD32)(ps_fgs_prms->u4_comp_model_value[c][i][j] << 1);
+							GETRANGE(u4_range, i4_val);
+							i4_payload_size += (((u4_range - 1) << 1) + 1);
+						}
+					}
+				}
+			}
+			/** film_grain_characteristics_repetition_period */
+			UWORD32 u4_range;
+			GETRANGE(u4_range, ps_fgs_prms->u4_film_grain_characteristics_repetition_period);
+			i4_payload_size += (((u4_range - 1) << 1) + 1);
+		}
+	}
+	//Converting to bytes
+	i4_payload_size = (i4_payload_size + 7) >> 3;
+
+	return_status |= i264_generate_nal_unit_header(ps_bitstrm, I264_SEI_NAL, 0);
+
+	/** Pass payload type & payload size*/
+	PUT_BITS(ps_bitstrm,
+		I264_SEI_FILM_GRAIN_CHARACTERISTICS_T,
+		8,
+		return_status,
+		"payload_type");
+
+	PUT_BITS(ps_bitstrm,
+		i4_payload_size,
+		8,
+		return_status,
+		"payload_size");
+
+	PUT_BITS(ps_bitstrm,
+		ps_fgs_prms->u1_film_grain_characteristics_cancel_flag,
+		1,
+		return_status,
+		"SEI: film_grain_characteristics_cancel_flag");
+
+	if (!ps_fgs_prms->u1_film_grain_characteristics_cancel_flag)
+	{
+		PUT_BITS(ps_bitstrm,
+			ps_fgs_prms->u1_film_grain_model_id,
+			2,
+			return_status,
+			"SEI: film_grain_model_id");
+
+		PUT_BITS(ps_bitstrm,
+			ps_fgs_prms->u1_separate_colour_description_present_flag,
+			1,
+			return_status,
+			"SEI: separate_colour_description_present_flag");
+
+		if (ps_fgs_prms->u1_separate_colour_description_present_flag)
+		{
+			PUT_BITS(ps_bitstrm,
+				ps_fgs_prms->u1_film_grain_bit_depth_luma_minus8,
+				3,
+				return_status,
+				"SEI: film_grain_bit_depth_luma_minus8");
+
+			PUT_BITS(ps_bitstrm,
+				ps_fgs_prms->u1_film_grain_bit_depth_chroma_minus8,
+				3,
+				return_status,
+				"SEI: film_grain_bit_depth_chroma_minus8");
+
+			PUT_BITS(ps_bitstrm,
+				ps_fgs_prms->u1_film_grain_full_range_flag,
+				1,
+				return_status,
+				"SEI: film_grain_full_range_flag");
+
+			PUT_BITS(ps_bitstrm,
+				ps_fgs_prms->u1_film_grain_colour_primaries,
+				8,
+				return_status,
+				"SEI: film_grain_colour_primaries");
+
+			PUT_BITS(ps_bitstrm,
+				ps_fgs_prms->u1_film_grain_transfer_characteristics,
+				8,
+				return_status,
+				"SEI: film_grain_transfer_characteristics");
+
+			PUT_BITS(ps_bitstrm,
+				ps_fgs_prms->u1_film_grain_matrix_coefficients,
+				8,
+				return_status,
+				"SEI: film_grain_matrix_coefficients");
+		}
+
+		PUT_BITS(ps_bitstrm,
+			ps_fgs_prms->u1_blending_mode_id,
+			2,
+			return_status,
+			"SEI: fgs_blending_mode_id");
+
+		PUT_BITS(ps_bitstrm,
+			ps_fgs_prms->u1_log2_scale_factor,
+			4,
+			return_status,
+			"SEI: fgs_log2_scale_factor");
+
+		for (c = 0; c < MAX_NUM_COMP; c++)
+		{
+			PUT_BITS(ps_bitstrm,
+				ps_fgs_prms->u1_comp_model_present_flag[c],
+				1,
+				return_status,
+				"SEI: fgs_comp_model_present_flag");
+		}
+
+		for (c = 0; c < MAX_NUM_COMP; c++)
+		{
+			if (ps_fgs_prms->u1_comp_model_present_flag[c])
+			{
+				PUT_BITS(ps_bitstrm,
+					ps_fgs_prms->u1_num_intensity_intervals_minus1[c],
+					8,
+					return_status,
+					"SEI: fgs_num_intensity_intervals_minus1");
+
+				PUT_BITS(ps_bitstrm,
+					ps_fgs_prms->u1_num_model_values_minus1[c],
+					3,
+					return_status,
+					"SEI: fgs_num_model_values_minus1");
+
+				for (i = 0; i <= ps_fgs_prms->u1_num_intensity_intervals_minus1[c]; i++)
+				{
+					PUT_BITS(ps_bitstrm,
+						ps_fgs_prms->u1_intensity_interval_lower_bound[c][i],
+						8,
+						return_status,
+						"SEI: fgs_intensity_interval_lower_bound");
+
+					PUT_BITS(ps_bitstrm,
+						ps_fgs_prms->u1_intensity_interval_upper_bound[c][i],
+						8,
+						return_status,
+						"SEI: fgs_intensity_interval_upper_bound");
+
+					for (j = 0; j <= ps_fgs_prms->u1_num_model_values_minus1[c]; j++)
+					{
+						PUT_BITS_SEV(ps_bitstrm,
+							ps_fgs_prms->u4_comp_model_value[c][i][j],
+							return_status,
+							"SEI: fgs_comp_model_value");
+					}
+				}
+			}
+		}
+
+		PUT_BITS_UEV(ps_bitstrm,
+			ps_fgs_prms->u4_film_grain_characteristics_repetition_period,
+			return_status,
+			"SEI: film_grain_characteristics_repetition_period");
+	}
+
+	return_status |= i264_byte_align(ps_bitstrm);
+	return_status |= i264_put_rbsp_trailing_bits(ps_bitstrm);
+
+	return return_status;
+}
+
+WORD32 i265_generate_sei_message(bitstrm_t *ps_bitstrm, fgcr_set_fgc_params_t *ps_fgs_prms, UWORD8 num_temporal_id)
 {
     WORD32 return_status = IV_SUCCESS;
     WORD32 i4_payload_size = 0;
@@ -587,7 +846,7 @@ WORD32 i264_generate_sei_message(bitstrm_t *ps_bitstrm, fgcr_set_fgc_params_t *p
     //Converting to bytes
     i4_payload_size = (i4_payload_size + 7) >> 3;
 
-    return_status |= i264_generate_nal_unit_header(ps_bitstrm, NAL_PREFIX_SEI, num_temporal_id);
+    return_status |= i265_generate_nal_unit_header(ps_bitstrm, NAL_PREFIX_SEI, num_temporal_id);
 
     /** Pass payload type & payload size*/
     PUT_BITS(ps_bitstrm, 

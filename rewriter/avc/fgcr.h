@@ -146,7 +146,8 @@ typedef enum {
     FGCR_CMD_CREATE                            = 1,
     FGCR_CMD_DELETE,
     FGCR_CMD_VIDEO_CTL,
-    FGCR_CMD_VIDEO_REWRITE
+    FGCR_CMD_VIDEO_REWRITE,
+	FGCR_CMD_EXPORT
 }FGCR_API_COMMAND_TYPE_T;
 
 /* FGCR_CONTROL_API_COMMAND_TYPE_T: Video Control API command type            */
@@ -154,6 +155,7 @@ typedef enum {
 typedef enum {
     FGCR_CMD_NA                          = 0x7FFFFFFF,
     FGCR_CMD_CTL_SETPARAMS               = 0x1,
+	FGCR_CMD_CTL_SETCODEC                = 0x2,
     FGCR_CMD_CTL_GETVERSION              = 0x6,
     FGCR_CMD_CTL_CODEC_SUBCMD_START      = 0x7
 }FGCR_CONTROL_API_COMMAND_TYPE_T;
@@ -394,6 +396,40 @@ typedef struct{
 	UWORD32                                     u4_error_code;
 }fgcr_ctl_set_config_op_t;
 
+typedef struct {
+	/**
+	 * u4_size of the structure
+	 */
+	UWORD32                                     u4_size;
+
+	/**
+	 * cmd
+	 */
+	FGCR_API_COMMAND_TYPE_T                      e_cmd;
+
+	/**
+	 * sub_cmd
+	 */
+	FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
+
+	/**
+	 * codec
+	 */
+	UWORD8                                       u1_codec;
+}fgcr_ctl_set_codec_ip_t;
+
+typedef struct {
+	/**
+	 * u4_size of the structure
+	 */
+	UWORD32                                     u4_size;
+
+	/**
+	 * u4_error_code
+	 */
+	UWORD32                                     u4_error_code;
+}fgcr_ctl_set_codec_op_t;
+
 /*****************************************************************************/
 /*   Rewriter control:Get Version Info                                       */
 /*****************************************************************************/
@@ -481,6 +517,7 @@ typedef struct
     /* Component model values for each intensity interval */
     UWORD32 u4_comp_model_value[MAX_NUM_COMP][MAX_NUM_INTENSITIES][MAX_NUM_MODEL_VALUES];
     /* To be 0:  Persistence of the film grain characteristics */
+	UWORD32 u4_film_grain_characteristics_repetition_period;
     UWORD32 u1_film_grain_characteristics_persistence_flag;
 }fgcr_ctl_set_fgc_params_t;
 
@@ -491,6 +528,18 @@ typedef struct
     FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
     void                                        *ps_fgs_rewrite_prms;
 }fgcr_ctl_fgs_rewrite_params_ip_t;
+
+typedef struct
+{
+	UWORD32                                     u4_size;
+	FGCR_API_COMMAND_TYPE_T                      e_cmd;
+	void                                        *ps_fgc_export_prms;
+}fgcr_ctl_fgc_export_ip_t;
+
+typedef struct {
+	UWORD32                                     u4_size;
+	UWORD32                                     u4_error_code;
+}fgcr_ctl_fgc_export_op_t;
 
 #ifdef __cplusplus
 } /* closing brace for extern "C" */

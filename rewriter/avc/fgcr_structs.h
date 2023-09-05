@@ -135,6 +135,7 @@ typedef struct _DecStruct
     WORD32 frm_SEI_counts;
 	WORD32 FGC_before_IDR_CRA_present;
     WORD8  is_fgs_rewrite_succ;
+	UWORD8 codec;
 } dec_struct_t;
 
 #endif /* _FGCR_STRUCTS_H */

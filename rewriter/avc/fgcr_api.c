@@ -152,6 +152,7 @@ static IV_API_CALL_STATUS_T api_check_struct_sanity(iv_obj_t *ps_handle,
 		break;
 
 	case FGCR_CMD_VIDEO_REWRITE:
+	case FGCR_CMD_EXPORT:
 	case FGCR_CMD_DELETE:
 	case FGCR_CMD_VIDEO_CTL:
 		if (ps_handle == NULL)
@@ -310,6 +311,10 @@ static IV_API_CALL_STATUS_T api_check_struct_sanity(iv_obj_t *ps_handle,
 		}
 
 		break;
+
+		case FGCR_CMD_EXPORT:
+		case FGCR_CMD_CTL_SETCODEC:
+			break;
 
 		case FGCR_CMD_CTL_GETVERSION:
 		{
@@ -672,6 +677,7 @@ IV_API_CALL_STATUS_T fgcr_video_rewrite(iv_obj_t *dec_hdl, void *pv_api_ip, void
 	WORD32 ret = 0;
 	IV_API_CALL_STATUS_T api_ret_value = IV_SUCCESS;
 	WORD32 header_data_left = 0, frame_data_left = 0;
+	UWORD8 codec = ps_dec->codec;
 	UWORD8 *pu1_bitstrm_buf;
 	UWORD8 *pu1_upd_bitstrm_buf;
 	fgcr_video_rewrite_ip_t    *ps_h264_dec_ip;
@@ -764,7 +770,7 @@ IV_API_CALL_STATUS_T fgcr_video_rewrite(iv_obj_t *dec_hdl, void *pv_api_ip, void
 
 		buflen = ih264d_find_start_code(pu1_buf, 0, u4_max_ofst,
 			&u4_length_of_start_code,
-			&u4_next_is_aud);
+			&u4_next_is_aud, codec);
 
 		if (buflen == -1)
 		{
@@ -818,7 +824,7 @@ IV_API_CALL_STATUS_T fgcr_video_rewrite(iv_obj_t *dec_hdl, void *pv_api_ip, void
 
 		ps_dec_op->pv_stream_out_buffer = ps_dec_ip->pv_stream_out_buffer;
 
-		ret = ih264d_parse_nal_unit_for_rewriter(dec_hdl, ps_dec_op, pu1_bitstrm_buf, &pu1_upd_bitstrm_buf, buflen, u4_length_of_start_code);
+		ret = ih264d_parse_nal_unit_for_rewriter(dec_hdl, ps_dec_op, pu1_bitstrm_buf, &pu1_upd_bitstrm_buf, buflen, u4_length_of_start_code, codec);
 
 		if (ret != OK)
 		{
@@ -857,6 +863,267 @@ IV_API_CALL_STATUS_T fgcr_video_rewrite(iv_obj_t *dec_hdl, void *pv_api_ip, void
 		ps_dec_op->u4_num_bytes_consumed);
 	return api_ret_value;
 }
+
+IV_API_CALL_STATUS_T fgcr_export(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_api_op)
+{
+	IV_API_CALL_STATUS_T api_ret_value = IV_SUCCESS;
+
+	dec_struct_t * ps_dec = (dec_struct_t *)(dec_hdl->pv_codec_handle);
+	fgcr_ctl_fgc_export_ip_t *ps_h264_dec_ip;
+	fgcr_ctl_fgc_export_op_t *ps_h264_dec_op;
+	
+	ps_h264_dec_ip = (fgcr_ctl_fgc_export_ip_t *)pv_api_ip;
+	ps_h264_dec_op = (fgcr_ctl_fgc_export_ip_t *)pv_api_op;
+
+
+	sei *ps_sei = ps_dec->ps_sei;
+
+	fgcr_ctl_set_fgc_params_t *fgc_export_params;
+	fgc_export_params = (fgcr_ctl_set_fgc_params_t *)ps_h264_dec_ip->ps_fgc_export_prms;
+
+	fgc_export_params->u1_film_grain_characteristics_cancel_flag = ps_sei->s_fgc_params.u1_film_grain_characteristics_cancel_flag;
+	fgc_export_params->u1_film_grain_model_id = ps_sei->s_fgc_params.u1_film_grain_model_id;
+	fgc_export_params->u1_separate_colour_description_present_flag = ps_sei->s_fgc_params.u1_separate_colour_description_present_flag;
+	if (fgc_export_params->u1_separate_colour_description_present_flag)
+	{
+		fgc_export_params->u1_film_grain_bit_depth_luma_minus8 = ps_sei->s_fgc_params.u1_film_grain_bit_depth_luma_minus8;
+		fgc_export_params->u1_film_grain_bit_depth_chroma_minus8 = ps_sei->s_fgc_params.u1_film_grain_bit_depth_chroma_minus8;
+		fgc_export_params->u1_film_grain_full_range_flag = ps_sei->s_fgc_params.u1_film_grain_full_range_flag;
+		fgc_export_params->u1_film_grain_colour_primaries = ps_sei->s_fgc_params.u1_film_grain_colour_primaries;
+		fgc_export_params->u1_film_grain_transfer_characteristics = ps_sei->s_fgc_params.u1_film_grain_transfer_characteristics;
+		fgc_export_params->u1_film_grain_matrix_coefficients = ps_sei->s_fgc_params.u1_film_grain_matrix_coefficients;
+	}
+    fgc_export_params->u1_blending_mode_id = ps_sei->s_fgc_params.u1_blending_mode_id;
+	fgc_export_params->u1_log2_scale_factor = ps_sei->s_fgc_params.u1_log2_scale_factor;
+
+	for (int c = 0; c < 3; c++)
+	{
+		fgc_export_params->u1_comp_model_present_flag[c] = ps_sei->s_fgc_params.au1_comp_model_present_flag[c];
+	}
+	for (int c = 0; c < 3; c++)
+	{
+		if (fgc_export_params->u1_comp_model_present_flag[c])
+		{
+			fgc_export_params->u1_num_intensity_intervals_minus1[c] = ps_sei->s_fgc_params.au1_num_intensity_intervals_minus1[c];
+			fgc_export_params->u1_num_model_values_minus1[c] = ps_sei->s_fgc_params.au1_num_model_values_minus1[c];
+			for (int i = 0; i <= fgc_export_params->u1_num_intensity_intervals_minus1[c]; i++)
+			{
+				fgc_export_params->u1_intensity_interval_lower_bound[c][i] = ps_sei->s_fgc_params.au1_intensity_interval_lower_bound[c][i];
+				fgc_export_params->u1_intensity_interval_upper_bound[c][i] = ps_sei->s_fgc_params.au1_intensity_interval_upper_bound[c][i];
+				for(int j=0; j<=fgc_export_params->u1_num_model_values_minus1[c]; j++)\
+				{
+					fgc_export_params->u4_comp_model_value[c][i][j] = ps_sei->s_fgc_params.ai4_comp_model_value[c][i][j];
+				}
+			}
+		}
+	}
+
+	fgc_export_params->u1_film_grain_characteristics_persistence_flag = ps_sei->s_fgc_params.u1_film_grain_characteristics_persistence_flag;
+	
+
+	return api_ret_value;
+	
+/////////////////////////////////////////////////////////////////////////////////	
+//	dec_struct_t * ps_dec = (dec_struct_t *)(dec_hdl->pv_codec_handle);
+//	WORD32 i4_err_status = 0;
+//	UWORD8 *pu1_buf = NULL;
+//	WORD32 buflen;
+//	UWORD32 u4_max_ofst, u4_length_of_start_code = 0;
+//	UWORD32 bytes_consumed = 0;
+//	UWORD32 bytes_consumed_bf_upd = 0;
+//	UWORD32 cur_slice_is_nonref = 0;
+//	UWORD32 u4_next_is_aud;
+//	UWORD32 u4_first_start_code_found = 0;
+//	WORD32 ret = 0;
+//	IV_API_CALL_STATUS_T api_ret_value = IV_SUCCESS;
+//	WORD32 header_data_left = 0, frame_data_left = 0;
+//	UWORD8 codec = ps_dec->codec;
+//	UWORD8 *pu1_bitstrm_buf;
+//	UWORD8 *pu1_upd_bitstrm_buf;
+//	fgcr_video_rewrite_ip_t    *ps_h264_dec_ip;
+//	fgcr_video_rewrite_op_t    *ps_h264_dec_op;
+//
+//	fgcr_video_rewrite_ip_t *ps_dec_ip;
+//	fgcr_video_rewrite_op_t *ps_dec_op;
+//
+//	ps_h264_dec_ip = (fgcr_video_rewrite_ip_t *)pv_api_ip;
+//	ps_h264_dec_op = (fgcr_video_rewrite_op_t *)pv_api_op;
+//
+//	ps_dec_ip = (fgcr_video_rewrite_ip_t *)ps_h264_dec_ip;
+//	ps_dec_op = (fgcr_video_rewrite_op_t *)ps_h264_dec_op;
+//
+//	{
+//		UWORD32 u4_size;
+//		u4_size = ps_dec_op->u4_size;
+//		memset(ps_dec_op, 0, sizeof(fgcr_video_rewrite_op_t));
+//		ps_dec_op->u4_size = u4_size;
+//	}
+//
+//	if (ps_dec->init_done != 1)
+//	{
+//		return IV_FAIL;
+//	}
+//
+//	if (0 == ps_dec->u1_flushfrm)
+//	{
+//		//Checks for new Buffer
+//		if (ps_dec_ip->pv_stream_buffer == NULL)
+//		{
+//			ps_dec_op->u4_error_code |= 1 << FGCR_UNSUPPORTEDPARAM;
+//			ps_dec_op->u4_error_code |= FGCR_DEC_FRM_BS_BUF_NULL;
+//			return IV_FAIL;
+//		}
+//		if (ps_dec_ip->u4_num_Bytes <= 0)
+//		{
+//			ps_dec_op->u4_error_code |= 1 << FGCR_UNSUPPORTEDPARAM;
+//			ps_dec_op->u4_error_code |= FGCR_DEC_NUMBYTES_INV;
+//			return IV_FAIL;
+//		}
+//	}
+//
+//	ps_dec->u1_pic_decode_done = 0;
+//
+//	ps_dec_op->u4_num_bytes_consumed = 0;
+//
+//	ps_dec_op->u4_num_bytes_generated = 0;
+//
+//	ps_dec_op->u4_error_code = 0;
+//
+//	ps_dec->ps_sei->u1_is_valid = 0;
+//
+//	ps_dec->u4_slice_start_code_found = 0;
+//
+//	/**
+//	 * In case the deocder is not in flush mode(in shared mode),
+//	 * then decoder has to pick up a buffer to write current frame.
+//	 * Check if a frame is available in such cases
+//	 */
+//
+//	if (ps_dec->u1_flushfrm && ps_dec->u1_init_dec_flag)
+//	{
+//		/*In the case of flush ,since no frame is decoded set pic type as invalid*/
+//
+//		return (IV_FAIL);
+//	}
+//
+//	ps_dec->u2_total_mbs_coded = 0;
+//	ps_dec->u4_first_slice_in_pic = 2;
+//
+//	fgcr_reset_sei(ps_dec);
+//	ps_dec_op->pv_stream_out_buffer = ps_dec_ip->pv_stream_out_buffer;
+//	pu1_upd_bitstrm_buf = (UWORD8 *)ps_dec_ip->pv_stream_out_buffer;
+//	ps_dec->is_fgs_rewrite_succ = 0;
+//	do
+//	{
+//		WORD32 buf_size;
+//
+//		pu1_buf = (UWORD8*)ps_dec_ip->pv_stream_buffer
+//			+ ps_dec_op->u4_num_bytes_consumed;
+//
+//		u4_max_ofst = ps_dec_ip->u4_num_Bytes
+//			- ps_dec_op->u4_num_bytes_consumed;
+//
+//		pu1_bitstrm_buf = ps_dec->pu1_bits_buf;
+//		buf_size = ps_dec->u4_bits_buf_size;
+//
+//		u4_next_is_aud = 0;
+//
+//		buflen = ih264d_find_start_code(pu1_buf, 0, u4_max_ofst,
+//			&u4_length_of_start_code,
+//			&u4_next_is_aud, codec);
+//
+//		if (buflen == -1)
+//		{
+//			buflen = 0;
+//		}
+//
+//		/* Ignore bytes beyond the allocated size of intermediate buffer */
+//		buflen = MIN(buflen, buf_size);
+//
+//		bytes_consumed = buflen + u4_length_of_start_code;
+//		ps_dec_op->u4_num_bytes_consumed += bytes_consumed;
+//		bytes_consumed_bf_upd = ps_dec_op->u4_num_bytes_generated;
+//
+//		if (buflen)
+//		{
+//			memcpy(pu1_bitstrm_buf, pu1_buf + u4_length_of_start_code,
+//				buflen);
+//			memcpy(pu1_upd_bitstrm_buf, pu1_buf, u4_length_of_start_code + buflen);
+//			pu1_upd_bitstrm_buf += u4_length_of_start_code;
+//			ps_dec_op->u4_num_bytes_generated += u4_length_of_start_code;
+//			/* Decoder may read extra 8 bytes near end of the frame */
+//			if ((buflen + 8) < buf_size)
+//			{
+//				memset(pu1_bitstrm_buf + buflen, 0, 8);
+//			}
+//			u4_first_start_code_found = 1;
+//		}
+//		else
+//		{
+//			if (u4_first_start_code_found == 0)
+//			{
+//				/*no start codes found in current process call*/
+//
+//				ps_dec->i4_error_code = ERROR_START_CODE_NOT_FOUND;
+//				ps_dec_op->u4_error_code |= 1 << FGCR_INSUFFICIENTDATA;
+//
+//				fgcr_fill_output_struct_from_context(ps_dec, ps_h264_dec_ip, ps_h264_dec_op);
+//
+//				ps_dec_op->u4_error_code = ps_dec->i4_error_code;
+//
+//				return (IV_FAIL);
+//			}
+//			else
+//			{
+//				/* a start code has already been found earlier in the same process call*/
+//				frame_data_left = 0;
+//				header_data_left = 0;				//for live streaming
+//				continue;
+//			}
+//		}
+//
+//		ps_dec_op->pv_stream_out_buffer = ps_dec_ip->pv_stream_out_buffer;
+//
+//		ret = ih264d_parse_nal_unit_for_fgc_export(dec_hdl, ps_dec_op, pu1_bitstrm_buf, &pu1_upd_bitstrm_buf, buflen, u4_length_of_start_code, codec);
+//
+//		if (ret != OK)
+//		{
+//			UWORD32 error = fgcr_map_error(ret);
+//			ps_dec_op->u4_error_code = error | ret;
+//			api_ret_value = IV_FAIL;
+//
+//			if (ret == FGCR_MEM_ALLOC_FAILED)
+//			{
+//				ps_dec->u4_slice_start_code_found = 0;
+//				break;
+//			}
+//
+//			if (ret == ERROR_INCOMPLETE_FRAME)
+//			{
+//				ps_dec_op->u4_num_bytes_consumed -= bytes_consumed;
+//				pu1_upd_bitstrm_buf -= (ps_dec_op->u4_num_bytes_generated - bytes_consumed_bf_upd);
+//				ps_dec_op->u4_num_bytes_generated = bytes_consumed_bf_upd;
+//				api_ret_value = IV_FAIL;
+//				break;
+//			}
+//		}
+//
+//		header_data_left = ((ps_dec->i4_decode_header == 1)
+//			&& (ps_dec->i4_header_decoded != 3)
+//			&& (ps_dec_op->u4_num_bytes_consumed < ps_dec_ip->u4_num_Bytes));
+//
+//		frame_data_left = (((ps_dec->i4_decode_header == 0)
+//			&& ((ps_dec->u1_pic_decode_done == 0)
+//				|| (u4_next_is_aud == 1)))
+//			&& (ps_dec_op->u4_num_bytes_consumed < ps_dec_ip->u4_num_Bytes));
+//	} while ((header_data_left == 1) || (frame_data_left == 1) && (!ps_dec->is_fgs_rewrite_succ));
+//
+//
+//	H264_DEC_DEBUG_PRINT("The num bytes consumed: %d\n",
+//		ps_dec_op->u4_num_bytes_consumed);
+//	return api_ret_value;
+}
+
 
 IV_API_CALL_STATUS_T fgcr_get_version(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_api_op)
 {
@@ -925,6 +1192,22 @@ IV_API_CALL_STATUS_T fgcr_set_params(iv_obj_t *dec_hdl, void *pv_api_ip, void *p
 	return ret;
 }
 
+IV_API_CALL_STATUS_T fgcr_set_codec(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_api_op)
+{
+	dec_struct_t * ps_dec;
+	IV_API_CALL_STATUS_T ret = IV_SUCCESS;
+
+	fgcr_ctl_set_codec_ip_t *ps_ctl_ip = (fgcr_ctl_set_codec_ip_t *)pv_api_ip;
+	fgcr_ctl_set_codec_op_t *ps_ctl_op = (fgcr_ctl_set_codec_op_t *)pv_api_op;
+
+	ps_dec = (dec_struct_t *)(dec_hdl->pv_codec_handle);
+
+	ps_dec->codec = ps_ctl_ip->u1_codec;
+
+	return ret;
+}
+
+
 /*****************************************************************************/
 /*                                                                           */
 /*  Function Name : fgcr_delete                                              */
@@ -986,6 +1269,9 @@ IV_API_CALL_STATUS_T fgcr_ctl(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_api_o
 	{
 	case FGCR_CMD_CTL_SETPARAMS:
 		ret = fgcr_set_params(dec_hdl, (void *)pv_api_ip, (void *)pv_api_op);
+		break;
+	case FGCR_CMD_CTL_SETCODEC:
+		ret = fgcr_set_codec(dec_hdl, (void *)pv_api_ip, (void *)pv_api_op);
 		break;
 	case FGCR_CMD_CTL_GETVERSION:
 		ret = fgcr_get_version(dec_hdl, (void *)pv_api_ip, (void *)pv_api_op);
@@ -1336,6 +1622,11 @@ IV_API_CALL_STATUS_T fgcr_api_function(
 	case FGCR_CMD_VIDEO_REWRITE:
 		// TODO add new function here  u4_api_ret = 1;
 		u4_api_ret = fgcr_video_rewrite(dec_hdl, (void *)pv_api_ip,
+			(void *)pv_api_op);
+		break;
+
+	case FGCR_CMD_EXPORT:
+		u4_api_ret = fgcr_export(dec_hdl, (void *)pv_api_ip,
 			(void *)pv_api_op);
 		break;
 
