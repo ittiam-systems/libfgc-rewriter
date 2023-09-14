@@ -127,8 +127,9 @@ typedef struct
     UWORD8 u1_intensity_interval_upper_bound[MAX_NUM_COMP][MAX_NUM_INTENSITIES];
     /* Component model values for each intensity interval */
     UWORD32 u4_comp_model_value[MAX_NUM_COMP][MAX_NUM_INTENSITIES][MAX_NUM_MODEL_VALUES];
-    /* To be 0:  Persistence of the film grain characteristics */
-	UWORD32 u4_film_grain_characteristics_repetition_period;
+    /* Repetition period of the film grain characteristics in AVC codec*/
+    UWORD32 u4_film_grain_characteristics_repetition_period;
+    /* To be 0:  Persistence of the film grain characteristics in HEVC codec*/
     UWORD8 u1_film_grain_characteristics_persistence_flag;
 }fgcr_set_fgc_params_t;
 

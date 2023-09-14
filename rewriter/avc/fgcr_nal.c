@@ -86,7 +86,7 @@ void ih264d_check_if_aud(UWORD8 *pu1_buf,
                          UWORD32 u4_cur_pos,
                          UWORD32 u4_max_ofst,
                          UWORD32 *pu4_next_is_aud,
-	                     UWORD8 codec)
+                         UWORD8 codec)
 {
     UWORD8 u1_first_byte, u1_nal_unit_type;
     if(u4_cur_pos + 1 < u4_max_ofst)
@@ -117,7 +117,7 @@ WORD32 ih264d_find_start_code(UWORD8 *pu1_buf,
                               UWORD32 u4_max_ofst,
                               UWORD32 *pu4_length_of_start_code,
                               UWORD32 *pu4_next_is_aud,
-							  UWORD8 codec)
+                              UWORD8 codec)
 {
     WORD32 zero_byte_cnt = 0;
     UWORD32 ui_curPosTemp;
@@ -164,8 +164,7 @@ WORD32 ih264d_find_start_code(UWORD8 *pu1_buf,
         u4_cur_pos++;
     }
 
-    //return (u4_cur_pos - zero_byte_cnt - ui_curPosTemp); //(START_CODE_NOT_FOUND);
-	return (u4_cur_pos - ui_curPosTemp); //(START_CODE_NOT_FOUND);
+    return (u4_cur_pos - ui_curPosTemp); //(START_CODE_NOT_FOUND);
 }
 
 /*!
@@ -194,7 +193,7 @@ WORD32 ih264d_find_start_code(UWORD8 *pu1_buf,
 WORD32 ih264d_process_nal_unit(dec_bit_stream_t *ps_bitstrm,
                             UWORD8 *pu1_nal_unit,
                             UWORD32 u4_numbytes_in_nal_unit,
-	                        UWORD8 codec)
+                            UWORD8 codec)
 {
     UWORD32 u4_num_bytes_in_rbsp;
     UWORD8 u1_cur_byte;
@@ -345,16 +344,16 @@ WORD32 ih264d_process_nal_unit(dec_bit_stream_t *ps_bitstrm,
                     << ((3 - (((u4_num_bytes_in_rbsp << 30) >> 30))) << 3));
     ps_bitstrm->u4_ofst = 0;
 
-	if (codec == AVC)
-	{
-		ps_bitstrm->u4_max_ofst = ((u4_num_bytes_in_rbsp + AVC_NAL_FIRST_BYTE_SIZE) << 3);
-	}
-	else if (codec == HEVC)
-	{
-		u4_num_bytes_in_rbsp--; //Since 1 more byte is used for Header in HEVC
+    if (codec == AVC)
+    {
+        ps_bitstrm->u4_max_ofst = ((u4_num_bytes_in_rbsp + AVC_NAL_FIRST_BYTE_SIZE) << 3);
+    }
+    else if (codec == HEVC)
+    {
+        u4_num_bytes_in_rbsp--; //Since 1 more byte is used for Header in HEVC
 
-		ps_bitstrm->u4_max_ofst = ((u4_num_bytes_in_rbsp + HEVC_NAL_FIRST_BYTE_SIZE) << 3);
-	}
+        ps_bitstrm->u4_max_ofst = ((u4_num_bytes_in_rbsp + HEVC_NAL_FIRST_BYTE_SIZE) << 3);
+    }
 
     return (u4_num_bytes_in_rbsp);
 }

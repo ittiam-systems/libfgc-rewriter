@@ -75,12 +75,14 @@ typedef struct _DecStruct
     dec_bit_stream_t *ps_upd_bitstrm;
     //Add new buffer?
     UWORD16 u2_first_mb_in_slice; /** Address of first MB in slice*/
-	UWORD8 u1_first_slice_segment_in_pic_flag;
+    /* Flag for the first slice segment in the pic*/
+    UWORD8 u1_first_slice_segment_in_pic_flag;
 
     /* These things need to be updated at each MbLevel */
     UWORD8 u1_nal_unit_type;
 
-	UWORD8 u1_nuh_temporal_id_plus1;
+    /* nuh_temporal_id_plus1 value from the NAL header in HEVC codec*/
+    UWORD8 u1_nuh_temporal_id_plus1;
 
     /* slice Header Simplification */
     WORD32 i4_error_code;
@@ -104,8 +106,8 @@ typedef struct _DecStruct
 
     UWORD8 u1_flushfrm;
 
-	UWORD32 u4_max_wd;
-	UWORD32 u4_max_ht;
+    UWORD32 u4_max_wd;
+    UWORD32 u4_max_ht;
     UWORD8 u1_pic_decode_done;
     WORD32 init_done;
 
@@ -119,7 +121,7 @@ typedef struct _DecStruct
     UWORD32 u4_first_slice_in_pic;
 
     void *(*pf_aligned_alloc)(void *pv_mem_ctxt, WORD32 alignment, WORD32 size);
-    void (*pf_aligned_free)(void *pv_mem_ctxt, void *pv_buf);
+    void(*pf_aligned_free)(void *pv_mem_ctxt, void *pv_buf);
     void *pv_mem_ctxt;
 
     WORD32 i4_disp_poc;
@@ -133,10 +135,10 @@ typedef struct _DecStruct
     UWORD32 u4_num_bytes_updated;
     WORD32 frm_counts;
     WORD32 frm_SEI_counts;
-	WORD32 FGC_before_IDR_CRA_present;
+    WORD32 FGC_before_IDR_CRA_present;
     WORD8  is_fgs_rewrite_succ;
-	UWORD8 codec;
-	UWORD8 u1_num_fgc;
+    UWORD8 codec;
+    UWORD8 u1_num_fgc;
 } dec_struct_t;
 
 #endif /* _FGCR_STRUCTS_H */

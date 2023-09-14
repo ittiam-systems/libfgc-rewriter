@@ -63,7 +63,7 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
     UWORD8 *pu1_buf,
     UWORD8 **pu1_upd_buf,
     UWORD32 u4_length,
-	UWORD32 u4_length_of_start_code,
-	UWORD8 codec);
+    UWORD32 u4_length_of_start_code,
+    UWORD8 codec);
 
 #endif /* _FGCR_PARSE_HEADERS_H_ */

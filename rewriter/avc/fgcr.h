@@ -130,6 +130,7 @@ typedef struct {
 #define MAX_CUT_OFF_FREQUENCY 14
 #define DEFAULT_HORZ_CUT_OFF_FREQUENCY 8
 #define MAX_ALLOWED_COMP_MODEL_PAIRS 10
+#define MAX_FGC                      20
 
 /*****************************************************************************/
 /* API Function Prototype                                                    */
@@ -147,7 +148,7 @@ typedef enum {
     FGCR_CMD_DELETE,
     FGCR_CMD_VIDEO_CTL,
     FGCR_CMD_VIDEO_REWRITE,
-	FGCR_CMD_EXPORT
+    FGCR_CMD_EXPORT
 }FGCR_API_COMMAND_TYPE_T;
 
 /* FGCR_CONTROL_API_COMMAND_TYPE_T: Video Control API command type            */
@@ -155,7 +156,7 @@ typedef enum {
 typedef enum {
     FGCR_CMD_NA                          = 0x7FFFFFFF,
     FGCR_CMD_CTL_SETPARAMS               = 0x1,
-	FGCR_CMD_CTL_SETCODEC                = 0x2,
+    FGCR_CMD_CTL_SETCODEC                = 0x2,
     FGCR_CMD_CTL_GETVERSION              = 0x6,
     FGCR_CMD_CTL_CODEC_SUBCMD_START      = 0x7
 }FGCR_CONTROL_API_COMMAND_TYPE_T;
@@ -417,6 +418,9 @@ typedef struct {
 	 */
 	UWORD8                                       u1_codec;
 
+    /**
+     * number of film grain characteristics
+     */
 	UWORD8                                       u1_num_fgc;
 }fgcr_ctl_set_codec_ip_t;
 
@@ -518,8 +522,9 @@ typedef struct
     UWORD8 u1_intensity_interval_upper_bound[MAX_NUM_COMP][MAX_NUM_INTENSITIES];
     /* Component model values for each intensity interval */
     UWORD32 u4_comp_model_value[MAX_NUM_COMP][MAX_NUM_INTENSITIES][MAX_NUM_MODEL_VALUES];
-    /* To be 0:  Persistence of the film grain characteristics */
-	UWORD32 u4_film_grain_characteristics_repetition_period;
+    /* Repetition period of the film grain characteristics in AVC codec*/
+    UWORD32 u4_film_grain_characteristics_repetition_period;
+    /* To be 0:  Persistence of the film grain characteristics in HEVC codec*/
     UWORD8 u1_film_grain_characteristics_persistence_flag;
 }fgcr_ctl_set_fgc_params_t;
 
@@ -528,7 +533,7 @@ typedef struct
     UWORD32                                     u4_size;
     FGCR_API_COMMAND_TYPE_T                      e_cmd;
     FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
-	UWORD8                                      u1_num_fgc;
+    UWORD8                                      u1_num_fgc;
     void                                        *ps_fgs_rewrite_prms[10];
 }fgcr_ctl_fgs_rewrite_params_ip_t;
 
