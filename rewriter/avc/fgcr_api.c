@@ -1203,7 +1203,8 @@ IV_API_CALL_STATUS_T fgcr_set_codec(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv
 	ps_dec = (dec_struct_t *)(dec_hdl->pv_codec_handle);
 
 	ps_dec->codec = ps_ctl_ip->u1_codec;
-
+	ps_dec->u1_num_fgc = ps_ctl_ip->u1_num_fgc;
+		
 	return ret;
 }
 
@@ -1549,8 +1550,11 @@ IV_API_CALL_STATUS_T fgcr_set_fgs_rewrite_params(
 	{
 	case FGCR_CMD_CTL_SET_FGS_FOR_REWRITE:
 	{
-		ps_dec->s_fgs_rewrite_prms = (fgcr_set_fgc_params_t*)ps_ip->ps_fgs_rewrite_prms;
-		i_status = error_check_FGS(ps_dec->s_fgs_rewrite_prms);
+		for (int i = 0; i < ps_ip->u1_num_fgc; i++)
+		{
+			ps_dec->s_fgs_rewrite_prms[i] = (fgcr_set_fgc_params_t*)ps_ip->ps_fgs_rewrite_prms[i];
+			i_status = error_check_FGS(ps_dec->s_fgs_rewrite_prms[i]);
+		}
 		ps_op->u4_error_code = i_status;
 	}
 		break;

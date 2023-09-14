@@ -272,13 +272,13 @@ WORD32 update_FGS_rewrite_str(dec_struct_t *ps_dec)
 
 	if (ps_dec->u4_fgs_overide_fgc_cancel_flag == 0)
 	{
-		ps_dec->s_fgs_rewrite_prms->u1_film_grain_characteristics_cancel_flag = 
+		ps_dec->s_fgs_rewrite_prms[ps_dec->frm_SEI_counts%ps_dec->u1_num_fgc]->u1_film_grain_characteristics_cancel_flag = 
 			ps_dec->s_fgs_prms.u1_film_grain_characteristics_cancel_flag;
 	}
 
 	if (ps_dec->u4_fgs_overide_log2_scale_factor == 0)
 	{
-		ps_dec->s_fgs_rewrite_prms->u1_log2_scale_factor = 
+		ps_dec->s_fgs_rewrite_prms[ps_dec->frm_SEI_counts%ps_dec->u1_num_fgc]->u1_log2_scale_factor =
 			ps_dec->s_fgs_prms.u1_log2_scale_factor;
 	}
 
@@ -286,7 +286,7 @@ WORD32 update_FGS_rewrite_str(dec_struct_t *ps_dec)
 	{
 		for (int c = 0; c < MAX_NUM_COMP; c++)
 		{
-			ps_dec->s_fgs_rewrite_prms->u1_comp_model_present_flag[c] = 
+			ps_dec->s_fgs_rewrite_prms[ps_dec->frm_SEI_counts%ps_dec->u1_num_fgc]->u1_comp_model_present_flag[c] =
 				ps_dec->s_fgs_prms.au1_comp_model_present_flag[c];
 		}
 
@@ -294,21 +294,21 @@ WORD32 update_FGS_rewrite_str(dec_struct_t *ps_dec)
 		{
 			if (ps_dec->s_fgs_prms.au1_comp_model_present_flag[c])
 			{
-				ps_dec->s_fgs_rewrite_prms->u1_num_intensity_intervals_minus1[c] = 
+				ps_dec->s_fgs_rewrite_prms[ps_dec->frm_SEI_counts%ps_dec->u1_num_fgc]->u1_num_intensity_intervals_minus1[c] =
 					ps_dec->s_fgs_prms.au1_num_intensity_intervals_minus1[c];
-				ps_dec->s_fgs_rewrite_prms->u1_num_model_values_minus1[c] = 
+				ps_dec->s_fgs_rewrite_prms[ps_dec->frm_SEI_counts%ps_dec->u1_num_fgc]->u1_num_model_values_minus1[c] =
 					ps_dec->s_fgs_prms.au1_num_model_values_minus1[c];
 
 				for (int i = 0; i <= ps_dec->s_fgs_prms.au1_num_intensity_intervals_minus1[c]; i++)
 				{
-					ps_dec->s_fgs_rewrite_prms->u1_intensity_interval_lower_bound[c][i] = 
+					ps_dec->s_fgs_rewrite_prms[ps_dec->frm_SEI_counts%ps_dec->u1_num_fgc]->u1_intensity_interval_lower_bound[c][i] =
 						ps_dec->s_fgs_prms.au1_intensity_interval_lower_bound[c][i];
-					ps_dec->s_fgs_rewrite_prms->u1_intensity_interval_upper_bound[c][i] = 
+					ps_dec->s_fgs_rewrite_prms[ps_dec->frm_SEI_counts%ps_dec->u1_num_fgc]->u1_intensity_interval_upper_bound[c][i] =
 						ps_dec->s_fgs_prms.au1_intensity_interval_upper_bound[c][i];
 
 					for (int j = 0; j <= ps_dec->s_fgs_prms.au1_num_model_values_minus1[c]; j++)
 					{
-						ps_dec->s_fgs_rewrite_prms->u4_comp_model_value[c][i][j] = 
+						ps_dec->s_fgs_rewrite_prms[ps_dec->frm_SEI_counts%ps_dec->u1_num_fgc]->u4_comp_model_value[c][i][j] =
 							ps_dec->s_fgs_prms.ai4_comp_model_value[c][i][j];
 					}
 				}
@@ -362,11 +362,11 @@ WORD32 ih264d_parse_sei_payload(dec_bit_stream_t *ps_bitstrm,
                 i_status = update_FGS_rewrite_str(ps_dec);
 				if (codec == AVC)
 				{
-					i_status = i264_generate_sei_message(&ps_bitstream, ps_dec->s_fgs_rewrite_prms);
+					i_status = i264_generate_sei_message(&ps_bitstream, ps_dec->s_fgs_rewrite_prms[ps_dec->frm_SEI_counts%ps_dec->u1_num_fgc]);
 				}
 				else if (codec == HEVC)
 				{
-					i_status = i265_generate_sei_message(&ps_bitstream, ps_dec->s_fgs_rewrite_prms, (ps_dec->u1_nuh_temporal_id_plus1 - 1));
+					i_status = i265_generate_sei_message(&ps_bitstream, ps_dec->s_fgs_rewrite_prms[ps_dec->frm_SEI_counts%ps_dec->u1_num_fgc], (ps_dec->u1_nuh_temporal_id_plus1 - 1));
 				}
                 if (i_status != OK)
                 {

@@ -129,9 +129,11 @@ typedef struct
 	UWORD32 u4_fgs_overide_log2_scale_factor;
 	UWORD32 u4_fgs_overide_dep_comp_model_values;
 
-	fgcr_ctl_set_fgc_params_t s_fgs_prms;
+	fgcr_ctl_set_fgc_params_t s_fgs_prms[10];
 	UWORD8 u1_codec;
 	UWORD8 u1_mode;
+	UWORD8 u1_num_fgc;
+	UWORD u1_fgc_count;
 } vid_dec_ctx_t;
 
 typedef enum
@@ -184,6 +186,7 @@ typedef enum
 	FILM_GRAIN_CHARACTERISTICS_PERSISTENCE_FLAG,
 	CODEC,
 	MODE,
+	NUM_FGC,
 } ARGUMENT_T;
 
 typedef struct
@@ -244,9 +247,15 @@ static const argument_t argument_mapping[] =
 
 	{"--",       "--comp_model_value",                  COMP_MODEL_VALUE,                "Comma-separated 'j' component model values  for y,u,v for every \"ith\" intensity interval\n"},
 
+	{"--",     "--film_grain_characteristics_repetition_period",           FILM_GRAIN_CHARACTERISTICS_REPETITION_PERIOD,      "repetition period \n"},
+
+	{"--",     "--film_grain_characteristics_persistence_flag",           FILM_GRAIN_CHARACTERISTICS_PERSISTENCE_FLAG,      "persistence flag \n"},
+
 	{"--",       "--codec",                  CODEC,                "AVC or HEVC codec"},
 
 	{"--",       "--mode",                  MODE,                "Rewrite or Export mode"},
+
+	{"--",       "--num_fgc",                  NUM_FGC,                "Number of film grain characteristics"},
 
 };
 
@@ -263,6 +272,8 @@ static const argument_t argument_mapping[] =
 /* modes */
 #define FGC_REWRITER  1
 #define FGC_EXPORT    2
+
+#define DEFAULT_NUM_FGC 1
 
 #define ivd_api_function        fgcr_api_function
 
@@ -498,47 +509,47 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 		break;
 
 	case FILM_GRAIN_CHARACTERISTICS_CANCEL_FLAG:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_characteristics_cancel_flag);
+		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_characteristics_cancel_flag);
 		break;
 
 	case FILM_GRAIN_MODEL_ID:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_model_id);
+		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_model_id);
 		break;
 
 	case SEPARATE_COLOUR_DESCRIPTION_PRESENT_FLAG:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_separate_colour_description_present_flag);
+		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_separate_colour_description_present_flag);
 		break;
 
 	case FILM_GRAIN_BIT_DEPTH_LUMA_MINUS8:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_bit_depth_luma_minus8);
+		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_bit_depth_luma_minus8);
 		break;
 
 	case FILM_GRAIN_BIT_DEPTH_CHROMA_MINUS8:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_bit_depth_chroma_minus8);
+		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_bit_depth_chroma_minus8);
 		break;
 
 	case FILM_GRAIN_FULL_RANGE_FLAG:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_full_range_flag);
+		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_full_range_flag);
 		break;
 
 	case FILM_GRAIN_COLOUR_PRIMARIES:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_colour_primaries);
+		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_colour_primaries);
 		break;
 
 	case FILM_GRAIN_TRANSFER_CHARACTERISTICS:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_transfer_characteristics);
+		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_transfer_characteristics);
 		break;
 
 	case FILM_GRAIN_MATRIX_COEFFICIENTS:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_matrix_coefficients);
+		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_matrix_coefficients);
 		break;
 
 	case BLENDING_MODE_ID:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_blending_mode_id);
+		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_blending_mode_id);
 		break;
 
 	case LOG2_SCALE_FACTOR:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_log2_scale_factor);
+		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_log2_scale_factor);
 		break;
 
 	case COMP_MODEL_PRESENT_FLAG:
@@ -554,7 +565,7 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 		{
 			if (i < MAX_NUM_COMP)
 			{
-				sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[i]);
+				sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_comp_model_present_flag[i]);
 				i++;
 				token = strtok(NULL, s);
 			}
@@ -581,7 +592,7 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 		{
 			if (i < MAX_NUM_COMP)
 			{
-				sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms.u1_num_intensity_intervals_minus1[i]);
+				sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_intensity_intervals_minus1[i]);
 				i++;
 				token = strtok(NULL, s);
 			}
@@ -608,7 +619,7 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 		{
 			if (i < MAX_NUM_COMP)
 			{
-				sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms.u1_num_model_values_minus1[i]);
+				sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_model_values_minus1[i]);
 				i++;
 				token = strtok(NULL, s);
 			}
@@ -636,13 +647,13 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 
 		for (i = 0; i < MAX_NUM_COMP; i++)
 		{
-			max_num_of_values += (ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[i] * (ps_app_ctx->s_fgs_prms.u1_num_intensity_intervals_minus1[i] + 1));
+			max_num_of_values += (ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_comp_model_present_flag[i] * (ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_intensity_intervals_minus1[i] + 1));
 		}
 
 		i = 0;
 		for (j = 0; j < MAX_NUM_COMP; j++)
 		{
-			num_intensity_itvls = (1 + ps_app_ctx->s_fgs_prms.u1_num_intensity_intervals_minus1[j])*ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[j];
+			num_intensity_itvls = (1 + ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_intensity_intervals_minus1[j])*ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_comp_model_present_flag[j];
 			for (k = 0; k < (num_intensity_itvls); k++)
 			{
 				if (token == NULL)
@@ -653,7 +664,7 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 				}
 				else
 				{
-					sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms.u1_intensity_interval_lower_bound[j][k]);
+					sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_intensity_interval_lower_bound[j][k]);
 					token = strtok(NULL, s);
 					i++;
 				}
@@ -676,7 +687,7 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 		token = strtok(str, s);
 		for (j = 0; j < MAX_NUM_COMP; j++)
 		{
-			num_intensity_itvls = (1 + ps_app_ctx->s_fgs_prms.u1_num_intensity_intervals_minus1[j])*ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[j];
+			num_intensity_itvls = (1 + ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_intensity_intervals_minus1[j])*ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_comp_model_present_flag[j];
 			for (k = 0; k < num_intensity_itvls; k++)
 			{
 				if (token == NULL)
@@ -687,7 +698,7 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 				}
 				else
 				{
-					sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms.u1_intensity_interval_upper_bound[j][k]);
+					sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_intensity_interval_upper_bound[j][k]);
 					token = strtok(NULL, s);
 					i++;
 				}
@@ -712,7 +723,7 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 
 		for (i = 0; i < MAX_NUM_COMP; i++)
 		{
-			max_num_of_values += (ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[i] * (ps_app_ctx->s_fgs_prms.u1_num_intensity_intervals_minus1[i] + 1));
+			max_num_of_values += (ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_comp_model_present_flag[i] * (ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_intensity_intervals_minus1[i] + 1));
 		}
 		i = 0; j = 0;
 
@@ -720,11 +731,11 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 		{
 			for (j = 0; j < MAX_NUM_COMP; j++)
 			{
-				num_intensity_itvls = (1 + ps_app_ctx->s_fgs_prms.u1_num_intensity_intervals_minus1[j])* ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[j];
+				num_intensity_itvls = (1 + ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_intensity_intervals_minus1[j])* ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_comp_model_present_flag[j];
 				for (k = 0; k < (num_intensity_itvls); k++)
 				{
-					num_comp_model_values = (1 + ps_app_ctx->s_fgs_prms.u1_num_model_values_minus1[j]) *
-						ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[j];
+					num_comp_model_values = (1 + ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_model_values_minus1[j]) *
+						ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_comp_model_present_flag[j];
 					for (v = 0; v < (num_comp_model_values); v++)
 					{
 						if (token == NULL)
@@ -735,7 +746,7 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 						}
 						else
 						{
-							sscanf(token, "%d", &ps_app_ctx->s_fgs_prms.u4_comp_model_value[j][k][v]);
+							sscanf(token, "%d", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u4_comp_model_value[j][k][v]);
 							token = strtok(NULL, s);
 							i++;
 						}
@@ -747,11 +758,11 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 	break;
 
 	case FILM_GRAIN_CHARACTERISTICS_REPETITION_PERIOD:
-		sscanf(value, "%d", &ps_app_ctx->s_fgs_prms.u4_film_grain_characteristics_repetition_period);
+		sscanf(value, "%d", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u4_film_grain_characteristics_repetition_period);
 		break;
 
 	case FILM_GRAIN_CHARACTERISTICS_PERSISTENCE_FLAG:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_characteristics_persistence_flag);
+		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_characteristics_persistence_flag);
 		break;
 
 	case CODEC:
@@ -760,6 +771,10 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 
 	case MODE:
 		sscanf(value, "%d", &ps_app_ctx->u1_mode);
+		break;
+
+	case NUM_FGC:
+		sscanf(value, "%d", &ps_app_ctx->u1_num_fgc);
 		break;
 
 	case INVALID:
@@ -809,6 +824,34 @@ void read_cfg_file(vid_dec_ctx_t *ps_app_ctx, FILE *fp_cfg_file)
 	}
 }
 
+void read_fgc_file(vid_dec_ctx_t *ps_app_ctx, FILE *fp_cfg_file)
+{
+	CHAR line[STRLENGTH];
+	CHAR description[STRLENGTH];
+	CHAR value[STRLENGTH];
+	CHAR argument[STRLENGTH];
+	void *ret;
+	while (0 == feof(fp_cfg_file))
+	{
+		line[0] = '\0';
+		ret = fgets(line, STRLENGTH, fp_cfg_file);
+		if (NULL == ret)
+			break;
+		argument[0] = '\0';
+		/* Reading Input File Name */
+		sscanf(line, "%s %s %s", argument, value, description);
+		if (argument[0] == '\0')
+			continue;
+		else if ((0 == strcmp(argument, "FGC")) && (0 != strcmp(value, "1")))
+		{
+			ps_app_ctx->u1_fgc_count++;
+			continue;
+		}
+		
+		parse_argument(ps_app_ctx, argument, value);
+	}
+}
+
 #ifdef X86_MINGW
 void sigsegv_handler()
 {
@@ -826,37 +869,40 @@ UWORD32 default_fgs_rewriter_params(vid_dec_ctx_t *ps_app_ctx)
 
 	/** Default FGS values if not given by the config file */
 	/* FGS parameters */
-	ps_app_ctx->s_fgs_prms.u1_film_grain_characteristics_cancel_flag = 1;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_model_id = 0;
-	ps_app_ctx->s_fgs_prms.u1_separate_colour_description_present_flag = 0;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_bit_depth_luma_minus8 = 0;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_bit_depth_chroma_minus8 = 0;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_full_range_flag = 0;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_colour_primaries = 0;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_transfer_characteristics = 0;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_matrix_coefficients = 0;
-	ps_app_ctx->s_fgs_prms.u1_blending_mode_id = 0;
-	ps_app_ctx->s_fgs_prms.u1_log2_scale_factor = 2;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_characteristics_persistence_flag = 0;
+	ps_app_ctx->s_fgs_prms[0].u1_film_grain_characteristics_cancel_flag = 1;
+	ps_app_ctx->s_fgs_prms[0].u1_film_grain_model_id = 0;
+	ps_app_ctx->s_fgs_prms[0].u1_separate_colour_description_present_flag = 0;
+	ps_app_ctx->s_fgs_prms[0].u1_film_grain_bit_depth_luma_minus8 = 0;
+	ps_app_ctx->s_fgs_prms[0].u1_film_grain_bit_depth_chroma_minus8 = 0;
+	ps_app_ctx->s_fgs_prms[0].u1_film_grain_full_range_flag = 0;
+	ps_app_ctx->s_fgs_prms[0].u1_film_grain_colour_primaries = 0;
+	ps_app_ctx->s_fgs_prms[0].u1_film_grain_transfer_characteristics = 0;
+	ps_app_ctx->s_fgs_prms[0].u1_film_grain_matrix_coefficients = 0;
+	ps_app_ctx->s_fgs_prms[0].u1_blending_mode_id = 0;
+	ps_app_ctx->s_fgs_prms[0].u1_log2_scale_factor = 2;
+	ps_app_ctx->s_fgs_prms[0].u1_film_grain_characteristics_persistence_flag = 0;
 	for (int c = 0; c < MAX_NUM_COMP; c++)
 	{
-		ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[c] = 0;
+		ps_app_ctx->s_fgs_prms[0].u1_comp_model_present_flag[c] = 0;
 	}
 
 	for (int c = 0; c < MAX_NUM_COMP; c++)
 	{
-		ps_app_ctx->s_fgs_prms.u1_num_intensity_intervals_minus1[c] = 0;
-		ps_app_ctx->s_fgs_prms.u1_num_model_values_minus1[c] = 0;
+		ps_app_ctx->s_fgs_prms[0].u1_num_intensity_intervals_minus1[c] = 0;
+		ps_app_ctx->s_fgs_prms[0].u1_num_model_values_minus1[c] = 0;
 		for (int i = 0; i <= MAX_NUM_INTENSITIES; i++)
 		{
-			ps_app_ctx->s_fgs_prms.u1_intensity_interval_lower_bound[c][i] = 0;
-			ps_app_ctx->s_fgs_prms.u1_intensity_interval_upper_bound[c][i] = 0;
+			ps_app_ctx->s_fgs_prms[0].u1_intensity_interval_lower_bound[c][i] = 0;
+			ps_app_ctx->s_fgs_prms[0].u1_intensity_interval_upper_bound[c][i] = 0;
 			for (int j = 0; j <= MAX_NUM_MODEL_VALUES; j++)
 			{
-				ps_app_ctx->s_fgs_prms.u4_comp_model_value[c][i][j] = 0;
+				ps_app_ctx->s_fgs_prms[0].u4_comp_model_value[c][i][j] = 0;
 			}
 		}
 	}
+	ps_app_ctx->s_fgs_prms[0].u4_film_grain_characteristics_repetition_period = 0;
+	ps_app_ctx->s_fgs_prms[0].u1_film_grain_characteristics_persistence_flag = 0;
+
 	return 0;
 }
 //int gettimeofday(struct timeval * tp, struct timezone * tzp)
@@ -898,7 +944,9 @@ UWORD32 default_fgs_rewriter_params(vid_dec_ctx_t *ps_app_ctx)
 int main(WORD32 argc, CHAR *argv[])
 {
 	CHAR ac_cfg_fname[STRLENGTH];
+	CHAR ac_fgc_fname[STRLENGTH];
 	FILE *fp_cfg_file = NULL;
+	FILE *fp_fgc_file = NULL;
 	FILE *ps_ip_file = NULL;
 	FILE *ps_fgs_upd_file = NULL;
 	FILE *ps_fgc_export_file = NULL;
@@ -976,6 +1024,8 @@ int main(WORD32 argc, CHAR *argv[])
 	s_app_ctx.u4_fgs_transform_type = DEFAULT_FGS_TRANSFORM_TYPE;
 	s_app_ctx.u4_fgs_disable_chroma = DEFAULT_FGS_DISABLE_CHROMA;
 	s_app_ctx.u1_mode = FGC_REWRITER;
+	s_app_ctx.u1_num_fgc = DEFAULT_NUM_FGC;
+	s_app_ctx.u1_fgc_count = 0;
 
 	default_fgs_rewriter_params(&s_app_ctx);
 
@@ -1017,6 +1067,19 @@ int main(WORD32 argc, CHAR *argv[])
 		}
 		read_cfg_file(&s_app_ctx, fp_cfg_file);
 		fclose(fp_cfg_file);
+	}
+
+	if(s_app_ctx.u1_num_fgc > 1)
+	{
+		strcpy(ac_fgc_fname, "D:\\FGC_Rewriter_HEVC\\fgc_file.txt");
+		if ((fp_fgc_file = fopen(ac_fgc_fname, "r")) == NULL)
+		{
+			sprintf(ac_error_str, "Could not open Film Grain Characteristics file %s",
+				ac_fgc_fname);
+			codec_exit(ac_error_str);
+		}
+		read_fgc_file(&s_app_ctx, fp_fgc_file);
+		fclose(fp_fgc_file);
 	}
 
 	if (s_app_ctx.u1_enable_logs != 0 && s_app_ctx.u1_enable_logs != 1)
@@ -1115,6 +1178,7 @@ int main(WORD32 argc, CHAR *argv[])
 		s_ctl_ip.e_sub_cmd = FGCR_CMD_CTL_SETCODEC;
 		s_ctl_ip.u4_size = sizeof(fgcr_ctl_set_codec_ip_t);
 		s_ctl_ip.u1_codec = s_app_ctx.u1_codec;
+		s_ctl_ip.u1_num_fgc = s_app_ctx.u1_num_fgc;
 
 		s_ctl_op.u4_size = sizeof(fgcr_ctl_set_codec_op_t);
 
@@ -1189,12 +1253,18 @@ int main(WORD32 argc, CHAR *argv[])
 
 			fgcr_ctl_fgs_rewrite_params_ip_t s_ctl_fgs_rewrite_ip;
 			fgcr_ctl_set_fgs_params_op_t     s_ctl_fgs_rewrite_op;
-			fgcr_ctl_set_fgc_params_t *ps_fgs_prms;
+			fgcr_ctl_set_fgc_params_t *ps_fgs_prms[10];
 
 			s_ctl_fgs_rewrite_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
 			s_ctl_fgs_rewrite_ip.e_sub_cmd = (FGCR_CONTROL_API_COMMAND_TYPE_T)FGCR_CMD_CTL_SET_FGS_FOR_REWRITE;
-			ps_fgs_prms = &s_app_ctx.s_fgs_prms;
-			s_ctl_fgs_rewrite_ip.ps_fgs_rewrite_prms = (void *)ps_fgs_prms;
+			s_ctl_fgs_rewrite_ip.u1_num_fgc = s_app_ctx.u1_num_fgc;
+			
+
+			for (int i = 0; i < s_app_ctx.u1_num_fgc; i++)
+			{
+				ps_fgs_prms[i] = &s_app_ctx.s_fgs_prms[i];
+				s_ctl_fgs_rewrite_ip.ps_fgs_rewrite_prms[i] = (void *)ps_fgs_prms[i];
+			}
 			ret = ivd_api_function((iv_obj_t*)codec_obj, (void *)&s_ctl_fgs_rewrite_ip,
 				(void *)&s_ctl_fgs_rewrite_op);
 			if (ret != IV_SUCCESS)
@@ -1316,7 +1386,7 @@ int main(WORD32 argc, CHAR *argv[])
 				
 
 				fgcr_ctl_set_fgc_params_t ps_fgc_export_prms_default;
-				ps_fgc_export_prms_default = s_app_ctx.s_fgs_prms;
+				ps_fgc_export_prms_default = s_app_ctx.s_fgs_prms[0];
 				
 				//ps_fgc_export_prms = &s_app_ctx.s_fgs_prms;
 				ps_fgc_export_prms = &ps_fgc_export_prms_default;

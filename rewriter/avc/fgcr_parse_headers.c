@@ -191,12 +191,14 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
 {
     dec_bit_stream_t *ps_bitstrm;
     static WORD32 i4_bits_left_in_cw = WORD_SIZE;
+	//static UWORD8 fgc_count = 0;
     dec_struct_t *ps_dec = (dec_struct_t *)dec_hdl->pv_codec_handle;
     UWORD8 u1_first_byte, u1_second_byte, u1_nal_ref_idc;
     UWORD8 u1_nal_unit_type, u1_nuh_temporal_id_plus1;
     WORD32 i_status = OK;
     ps_bitstrm = ps_dec->ps_bitstrm;
     UWORD8 *ps_upd_bitstrm = (UWORD8 *)ps_dec_op->pv_stream_out_buffer;
+	UWORD8 num_fgc = ps_dec->u1_num_fgc;
     if (pu1_buf)
     {
         if (u4_length)
@@ -334,7 +336,8 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
 										ps_bitstream.i4_zero_bytes_run = 0;
 										ps_bitstream.u4_max_strm_size = 10000;
 										i_status = i264_generate_sei_message(&ps_bitstream,
-											ps_dec->s_fgs_rewrite_prms);
+											ps_dec->s_fgs_rewrite_prms[ps_dec->frm_SEI_counts%num_fgc]);
+										//fgc_count++;
 										if (i_status != OK)
 										{
 											return i_status;
@@ -599,7 +602,8 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
 										ps_bitstream.i4_zero_bytes_run = 0;
 										ps_bitstream.u4_max_strm_size = 10000;
 										i_status = i265_generate_sei_message(&ps_bitstream,
-											ps_dec->s_fgs_rewrite_prms, 0);
+											ps_dec->s_fgs_rewrite_prms[ps_dec->frm_SEI_counts%num_fgc], 0);
+										//fgc_count++;
 										if (i_status != OK)
 										{
 											return i_status;

@@ -127,7 +127,7 @@ typedef struct _DecStruct
     UWORD32 u4_fgs_overide_fgc_cancel_flag;
     UWORD32 u4_fgs_overide_log2_scale_factor;
     UWORD32 u4_fgs_overide_dep_comp_model_values;
-    fgcr_set_fgc_params_t  *s_fgs_rewrite_prms;
+    fgcr_set_fgc_params_t  *s_fgs_rewrite_prms[10];
     UWORD8 *temp_mem_holder;
     UWORD8 *ps_u1_upd_buf;
     UWORD32 u4_num_bytes_updated;
@@ -136,6 +136,7 @@ typedef struct _DecStruct
 	WORD32 FGC_before_IDR_CRA_present;
     WORD8  is_fgs_rewrite_succ;
 	UWORD8 codec;
+	UWORD8 u1_num_fgc;
 } dec_struct_t;
 
 #endif /* _FGCR_STRUCTS_H */

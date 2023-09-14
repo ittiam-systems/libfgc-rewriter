@@ -129,7 +129,7 @@ typedef struct
     UWORD32 u4_comp_model_value[MAX_NUM_COMP][MAX_NUM_INTENSITIES][MAX_NUM_MODEL_VALUES];
     /* To be 0:  Persistence of the film grain characteristics */
 	UWORD32 u4_film_grain_characteristics_repetition_period;
-    UWORD32 u1_film_grain_characteristics_persistence_flag;
+    UWORD8 u1_film_grain_characteristics_persistence_flag;
 }fgcr_set_fgc_params_t;
 
 WORD32 i264_generate_sei_message(bitstrm_t *ps_bitstrm, fgcr_set_fgc_params_t *ps_fgs_prms);

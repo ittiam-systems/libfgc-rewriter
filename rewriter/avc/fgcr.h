@@ -416,6 +416,8 @@ typedef struct {
 	 * codec
 	 */
 	UWORD8                                       u1_codec;
+
+	UWORD8                                       u1_num_fgc;
 }fgcr_ctl_set_codec_ip_t;
 
 typedef struct {
@@ -518,7 +520,7 @@ typedef struct
     UWORD32 u4_comp_model_value[MAX_NUM_COMP][MAX_NUM_INTENSITIES][MAX_NUM_MODEL_VALUES];
     /* To be 0:  Persistence of the film grain characteristics */
 	UWORD32 u4_film_grain_characteristics_repetition_period;
-    UWORD32 u1_film_grain_characteristics_persistence_flag;
+    UWORD8 u1_film_grain_characteristics_persistence_flag;
 }fgcr_ctl_set_fgc_params_t;
 
 typedef struct
@@ -526,7 +528,8 @@ typedef struct
     UWORD32                                     u4_size;
     FGCR_API_COMMAND_TYPE_T                      e_cmd;
     FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
-    void                                        *ps_fgs_rewrite_prms;
+	UWORD8                                      u1_num_fgc;
+    void                                        *ps_fgs_rewrite_prms[10];
 }fgcr_ctl_fgs_rewrite_params_ip_t;
 
 typedef struct
