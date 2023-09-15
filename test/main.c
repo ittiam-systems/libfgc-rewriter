@@ -187,6 +187,7 @@ typedef enum
 	FILM_GRAIN_CHARACTERISTICS_PERSISTENCE_FLAG,
 	CODEC,
 	MODE,
+    FGC_EXPORT_FILE,
 	NUM_FGC,
 	FGC_FILE,
 } ARGUMENT_T;
@@ -207,6 +208,8 @@ static const argument_t argument_mapping[] =
 		 "config file (Default: test.cfg)\n" },
 	{ "--", "--fgc_file",      FGC_FILE,
 		 "file containing list of film grain characteristics\n" },
+     { "--", "--fgc_export_file",      FGC_EXPORT_FILE,
+         "file in which film grain characteristics from a bitstream are exported\n" },
 
 	{"-v",  "--version",                VERSION,
 		 "Version information\n"},
@@ -783,6 +786,11 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 
     case FGC_FILE:
         sscanf(value, "%s", ps_app_ctx->ac_fgc_file_fname);
+        break;
+
+    case FGC_EXPORT_FILE:
+        sscanf(value, "%s", ps_app_ctx->ac_fgc_export_fname);
+        break;
 
     case INVALID:
     default:
@@ -1017,6 +1025,7 @@ int main(WORD32 argc, CHAR *argv[])
 	/***********************************************************************/
 
 	strcpy(s_app_ctx.ac_ip_fname, "\0");
+    strcpy(s_app_ctx.ac_fgc_export_fname, "\0");
 	s_app_ctx.fps = DEFAULT_FPS;
 	file_pos = 0;
 	total_bytes_comsumed = 0;
@@ -1105,13 +1114,18 @@ int main(WORD32 argc, CHAR *argv[])
 		exit(-1);
 	}
 
+    if (strcmp(s_app_ctx.ac_fgc_export_fname, "\0") == 0)
+    {
+        printf("Using fgc_export.txt as export file \n");
+        strcpy(s_app_ctx.ac_fgc_export_fname, "fgc_export.txt");
+    }
+
 	/***********************************************************************/
 	/*          create the file object for input file                      */
 	/***********************************************************************/
 	ps_ip_file = fopen(s_app_ctx.ac_ip_fname, "rb");
 	ps_fgs_upd_file = fopen(s_app_ctx.ac_op_fgs_fname, "wb");
 
-	strcpy(s_app_ctx.ac_fgc_export_fname, "fgc_export.txt");
 	ps_fgc_export_file = fopen(s_app_ctx.ac_fgc_export_fname, "wb");
 
 	if (NULL == ps_ip_file)
@@ -1448,7 +1462,14 @@ int main(WORD32 argc, CHAR *argv[])
 					}
 				}
 
-				fprintf(ps_fgc_export_file, "u1_film_grain_characteristics_persistence_flag %d \n", ps_fgc_export_prms->u1_film_grain_characteristics_persistence_flag);
+                if (s_app_ctx.u1_codec == AVC)
+                {
+                    fprintf(ps_fgc_export_file, "u4_film_grain_characteristics_repetition_period %d \n", ps_fgc_export_prms->u4_film_grain_characteristics_repetition_period);
+                }
+                else if (s_app_ctx.u1_codec == HEVC)
+                {
+                    fprintf(ps_fgc_export_file, "u1_film_grain_characteristics_persistence_flag %d \n", ps_fgc_export_prms->u1_film_grain_characteristics_persistence_flag);
+                }
 				
 			}
 

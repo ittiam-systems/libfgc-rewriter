@@ -51,7 +51,7 @@
  **************************************************************************
  */
 #include "fgcr_bitstrm.h"
-#include "fgcr_defs.h"
+#include "fgcr.h"
 #include "fgcr_typedefs.h"
 #include "fgcr_platform_macros.h"
 #include "fgcr_defs.h"

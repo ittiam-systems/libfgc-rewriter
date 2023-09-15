@@ -55,10 +55,6 @@
  ************************************************************************
  */
 
-/* codec type */
-#define AVC 1
-#define HEVC 2
-
 /** Bit manipulation macros */
 #define CHECKBIT(a,i) ((a) &  (1 << i))
 
@@ -86,32 +82,9 @@
 #define FILLER_DATA_NAL                 12
 
 /** NAL Types - HEVC */
-#define NAL_TRAIL_N                       0
-#define NAL_TRAIL_R                       1
-#define NAL_TSA_N                         2
-#define NAL_TSA_R                         3
-#define NAL_STSA_N                        4
-#define NAL_STSA_R                        5
-#define NAL_RADL_N                        6
-#define NAL_RADL_R                        7
-#define NAL_RASL_N                        8
-#define NAL_RASL_R                        9
-#define NAL_RSV_VCL_N10                   10
-#define NAL_RSV_VCL_N12                   12
-#define NAL_RSV_VCL_N14                   14
-#define NAL_RSV_VCL_R11                   11
-#define NAL_RSV_VCL_R13                   13
-#define NAL_RSV_VCL_R15                   15
-#define NAL_BLA_W_LP                      16
-#define NAL_BLA_W_DLP                     17
-#define NAL_BLA_N_LP                      18
 #define NAL_IDR_W_LP                      19
 #define NAL_IDR_N_LP                      20
 #define NAL_CRA                           21
-#define NAL_RSV_RAP_VCL22                 22
-#define NAL_RSV_RAP_VCL23                 23
-#define NAL_RSV_VCL24                     24
-#define NAL_RSV_VCL31                     31
 #define NAL_VPS                           32
 #define NAL_SPS                           33
 #define NAL_PPS                           34
@@ -120,12 +93,6 @@
 #define NAL_EOB                           37
 #define NAL_FD                            38
 #define NAL_PREFIX_SEI                    39
-#define NAL_SUFFIX_SEI                    40
-#define NAL_RSV_NVCL41                    41
-#define NAL_RSV_NVCL47                    47
-#define NAL_UNSPEC48                      48
-#define NAL_UNSPEC63                      49
-
 
 /** Picture Types */
 #define I_PIC       0

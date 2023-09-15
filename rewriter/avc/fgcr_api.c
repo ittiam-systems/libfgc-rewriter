@@ -281,6 +281,33 @@ static IV_API_CALL_STATUS_T api_check_struct_sanity(iv_obj_t *ps_handle,
 	}
 	break;
 
+    case FGCR_CMD_EXPORT:
+    {
+        fgcr_ctl_fgc_export_ip_t *ps_ip = (fgcr_ctl_fgc_export_ip_t *)pv_api_ip;
+        fgcr_ctl_fgc_export_op_t *ps_op = (fgcr_ctl_fgc_export_op_t *)pv_api_op;
+
+        ps_op->u4_error_code = 0;
+
+        if (ps_ip->u4_size != sizeof(fgcr_ctl_fgc_export_ip_t))
+        {
+            ps_op->u4_error_code |= 1
+                << FGCR_UNSUPPORTEDPARAM;
+            ps_op->u4_error_code |=
+                FGCR_IP_API_STRUCT_SIZE_INCORRECT;
+            return (IV_FAIL);
+        }
+
+        if (ps_op->u4_size != sizeof(fgcr_ctl_fgc_export_op_t))
+        {
+            ps_op->u4_error_code |= 1
+                << FGCR_UNSUPPORTEDPARAM;
+            ps_op->u4_error_code |=
+                FGCR_OP_API_STRUCT_SIZE_INCORRECT;
+            return (IV_FAIL);
+        }
+    }
+    break;
+
 	case FGCR_CMD_VIDEO_CTL:
 	{
 		UWORD32 *pu4_ptr_cmd;
@@ -312,9 +339,31 @@ static IV_API_CALL_STATUS_T api_check_struct_sanity(iv_obj_t *ps_handle,
 
 		break;
 
-		case FGCR_CMD_EXPORT:
 		case FGCR_CMD_CTL_SETCODEC:
-			break;
+        {
+            fgcr_ctl_set_codec_ip_t *ps_ip;
+            fgcr_ctl_set_codec_op_t *ps_op;
+
+            ps_ip = (fgcr_ctl_set_codec_ip_t *)pv_api_ip;
+            ps_op = (fgcr_ctl_set_codec_op_t *)pv_api_op;
+
+            if (ps_ip->u4_size != sizeof(fgcr_ctl_set_codec_ip_t))
+            {
+                ps_op->u4_error_code |= 1 << FGCR_UNSUPPORTEDPARAM;
+                ps_op->u4_error_code |=
+                    FGCR_IP_API_STRUCT_SIZE_INCORRECT;
+                return IV_FAIL;
+            }
+
+            if (ps_op->u4_size != sizeof(fgcr_ctl_set_codec_op_t))
+            {
+                ps_op->u4_error_code |= 1 << FGCR_UNSUPPORTEDPARAM;
+                ps_op->u4_error_code |=
+                    FGCR_OP_API_STRUCT_SIZE_INCORRECT;
+                return IV_FAIL;
+            }
+            break;
+        }
 
 		case FGCR_CMD_CTL_GETVERSION:
 		{
@@ -917,7 +966,14 @@ IV_API_CALL_STATUS_T fgcr_export(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_ap
         }
     }
 
-    fgc_export_params->u1_film_grain_characteristics_persistence_flag = ps_sei->s_fgc_params.u1_film_grain_characteristics_persistence_flag;
+    if (ps_dec->codec == AVC)
+    {
+        fgc_export_params->u4_film_grain_characteristics_repetition_period = ps_sei->s_fgc_params.u4_film_grain_characteristics_repetition_period;
+    }
+    else if(ps_dec->codec == HEVC)
+    {
+        fgc_export_params->u1_film_grain_characteristics_persistence_flag = ps_sei->s_fgc_params.u1_film_grain_characteristics_persistence_flag;
+    }
 
     return api_ret_value;
 }

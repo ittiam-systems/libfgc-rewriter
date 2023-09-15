@@ -65,6 +65,11 @@ extern "C" {
 /* Constant Macros                                                           */
 /*****************************************************************************/
 
+
+/* codec type */
+#define AVC 1
+#define HEVC 2
+
 /*SEI FGC relaeted macros*/
 #define SEI_FGC_NUM_COLOUR_COMPONENTS 3
 #define SEI_FGC_MAX_NUM_MODEL_VALUES 6
@@ -398,42 +403,42 @@ typedef struct{
 }fgcr_ctl_set_config_op_t;
 
 typedef struct {
-	/**
-	 * u4_size of the structure
-	 */
-	UWORD32                                     u4_size;
+    /**
+     * u4_size of the structure
+     */
+    UWORD32                                     u4_size;
 
-	/**
-	 * cmd
-	 */
-	FGCR_API_COMMAND_TYPE_T                      e_cmd;
+    /**
+     * cmd
+     */
+    FGCR_API_COMMAND_TYPE_T                      e_cmd;
 
-	/**
-	 * sub_cmd
-	 */
-	FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
+    /**
+     * sub_cmd
+     */
+    FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
 
-	/**
-	 * codec
-	 */
-	UWORD8                                       u1_codec;
+    /**
+     * codec
+     */
+    UWORD8                                       u1_codec;
 
     /**
      * number of film grain characteristics
      */
-	UWORD8                                       u1_num_fgc;
+    UWORD8                                       u1_num_fgc;
 }fgcr_ctl_set_codec_ip_t;
 
 typedef struct {
-	/**
-	 * u4_size of the structure
-	 */
-	UWORD32                                     u4_size;
+    /**
+     * u4_size of the structure
+     */
+    UWORD32                                     u4_size;
 
-	/**
-	 * u4_error_code
-	 */
-	UWORD32                                     u4_error_code;
+    /**
+     * u4_error_code
+     */
+    UWORD32                                     u4_error_code;
 }fgcr_ctl_set_codec_op_t;
 
 /*****************************************************************************/
@@ -534,19 +539,19 @@ typedef struct
     FGCR_API_COMMAND_TYPE_T                      e_cmd;
     FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
     UWORD8                                      u1_num_fgc;
-    void                                        *ps_fgs_rewrite_prms[10];
+    void                                        *ps_fgs_rewrite_prms[MAX_FGC];
 }fgcr_ctl_fgs_rewrite_params_ip_t;
 
 typedef struct
 {
-	UWORD32                                     u4_size;
-	FGCR_API_COMMAND_TYPE_T                      e_cmd;
-	void                                        *ps_fgc_export_prms;
+    UWORD32                                     u4_size;
+    FGCR_API_COMMAND_TYPE_T                      e_cmd;
+    void                                        *ps_fgc_export_prms;
 }fgcr_ctl_fgc_export_ip_t;
 
 typedef struct {
-	UWORD32                                     u4_size;
-	UWORD32                                     u4_error_code;
+    UWORD32                                     u4_size;
+    UWORD32                                     u4_error_code;
 }fgcr_ctl_fgc_export_op_t;
 
 #ifdef __cplusplus

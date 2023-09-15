@@ -435,54 +435,14 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                     {
                     case NAL_PREFIX_SEI:
                         break;
-                        /*case IDR_SLICE_NAL:
-                        case SLICE_NAL:
-                            break;*/
-                    case NAL_TRAIL_N:
-                    case NAL_TRAIL_R:
-                    case NAL_TSA_N:
-                    case NAL_TSA_R:
-                    case NAL_STSA_N:
-                    case NAL_STSA_R:
-                    case NAL_RADL_N:
-                    case NAL_RADL_R:
-                    case NAL_RASL_N:
-                    case NAL_RASL_R:
-                    case NAL_RSV_VCL_N10:
-                    case NAL_RSV_VCL_N12:
-                    case NAL_RSV_VCL_N14:
-                    case NAL_RSV_VCL_R11:
-                    case NAL_RSV_VCL_R13:
-                    case NAL_RSV_VCL_R15:
-                    case NAL_BLA_W_LP:
-                    case NAL_BLA_W_DLP:
-                    case NAL_BLA_N_LP:
-                    case NAL_RSV_RAP_VCL22:
-                    case NAL_RSV_RAP_VCL23:
-                    case NAL_RSV_VCL24:
-                    case NAL_RSV_VCL31:
-
-                        ps_dec->FGC_before_IDR_CRA_present = 0;
-                        *pu1_upd_buf += u4_length;
-                        ps_dec_op->u4_num_bytes_generated += u4_length;
-                        i4_bits_left_in_cw -= (u4_length << 3);
-                        while (i4_bits_left_in_cw <= 0)
-                        {
-                            i4_bits_left_in_cw += WORD_SIZE;
-                        }
-                        if (i4_bits_left_in_cw > 32)
-                        {
-                            //Do nothing
-                        }
-                        break;
 
                     case NAL_IDR_W_LP:
                     case NAL_IDR_N_LP:
                     case NAL_CRA:
                         break;
-                    default:
 
-                        ps_dec->FGC_before_IDR_CRA_present = 0;
+                    default:
+                        ps_dec->u1_fgc_present_before_idr_cra_flag = 0;
                         *pu1_upd_buf += u4_length;
                         ps_dec_op->u4_num_bytes_generated += u4_length;
                         i4_bits_left_in_cw -= (u4_length << 3);
@@ -527,7 +487,7 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                                 if ((ps_dec->u1_first_slice_segment_in_pic_flag == 1) && (ps_dec->u4_fgs_enable_rewriter))
                                 {
                                     ps_dec->frm_counts++;
-                                    if (ps_dec->FGC_before_IDR_CRA_present == 1)
+                                    if (ps_dec->u1_fgc_present_before_idr_cra_flag == 1)
                                     {
                                         *pu1_upd_buf += u4_length;
                                         ps_dec_op->u4_num_bytes_generated += u4_length;
@@ -586,7 +546,7 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                             *pu1_upd_buf += u4_length;
                             ps_dec_op->u4_num_bytes_generated += u4_length;
                         }
-                        ps_dec->FGC_before_IDR_CRA_present = 0;
+                        ps_dec->u1_fgc_present_before_idr_cra_flag = 0;
                         break;
 
                     case NAL_PREFIX_SEI:
