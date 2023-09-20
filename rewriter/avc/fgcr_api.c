@@ -511,6 +511,7 @@ WORD32 fgcr_free_bufs(iv_obj_t *dec_hdl)
 	PS_DEC_ALIGNED_FREE(ps_dec, ps_dec->ps_bitstrm);
 	PS_DEC_ALIGNED_FREE(ps_dec, ps_dec->pu1_bits_buf);
 	PS_DEC_ALIGNED_FREE(ps_dec, ps_dec->temp_mem_holder);
+    PS_DEC_ALIGNED_FREE(ps_dec, ps_dec->s_fgs_rewrite_prms);
 
 	PS_DEC_ALIGNED_FREE(ps_dec, dec_hdl->pv_codec_handle);
 
@@ -1042,6 +1043,7 @@ IV_API_CALL_STATUS_T fgcr_set_params(iv_obj_t *dec_hdl, void *pv_api_ip, void *p
 	ps_ctl_op->u4_error_code = 0;
 
 	ps_dec->i4_decode_header = 0;
+    ps_dec->u1_num_fgc = ps_ctl_ip->u1_num_fgc;
 
 	return ret;
 }
@@ -1057,7 +1059,6 @@ IV_API_CALL_STATUS_T fgcr_set_codec(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv
     ps_dec = (dec_struct_t *)(dec_hdl->pv_codec_handle);
 
     ps_dec->codec = ps_ctl_ip->u1_codec;
-    ps_dec->u1_num_fgc = ps_ctl_ip->u1_num_fgc;
 
     return ret;
 }
@@ -1377,12 +1378,6 @@ WORD32 error_check_FGS(fgcr_set_fgc_params_t *ps_fgc_param)
 				}
 			}
 		}
-
-		//if (0 != ps_fgc_param->u4_film_grain_characteristics_repetition_period)
-		//{
-		//	printf("Error: Invalid value for film_grain_characteristics_repetition_period");
-		//	return IV_FAIL;
-		//}
 	}
 	return 0;
 }
@@ -1404,10 +1399,11 @@ IV_API_CALL_STATUS_T fgcr_set_fgs_rewrite_params(
 	{
 	case FGCR_CMD_CTL_SET_FGS_FOR_REWRITE:
 	{
+        ps_dec->s_fgs_rewrite_prms = (fgcr_set_fgc_params_t*)malloc(ps_ip->u1_num_fgc * sizeof(fgcr_set_fgc_params_t));
+        memcpy(ps_dec->s_fgs_rewrite_prms, (fgcr_set_fgc_params_t*)ps_ip->ps_fgs_rewrite_prms, ps_ip->u1_num_fgc * sizeof(fgcr_set_fgc_params_t));
 		for (int i = 0; i < ps_ip->u1_num_fgc; i++)
 		{
-			ps_dec->s_fgs_rewrite_prms[i] = (fgcr_set_fgc_params_t*)ps_ip->ps_fgs_rewrite_prms[i];
-			i_status = error_check_FGS(ps_dec->s_fgs_rewrite_prms[i]);
+			i_status = error_check_FGS(ps_dec->s_fgs_rewrite_prms + i);
 		}
 		ps_op->u4_error_code = i_status;
 	}

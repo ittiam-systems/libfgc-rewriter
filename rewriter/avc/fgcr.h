@@ -135,7 +135,6 @@ typedef struct {
 #define MAX_CUT_OFF_FREQUENCY 14
 #define DEFAULT_HORZ_CUT_OFF_FREQUENCY 8
 #define MAX_ALLOWED_COMP_MODEL_PAIRS 10
-#define MAX_FGC                      20
 
 /*****************************************************************************/
 /* API Function Prototype                                                    */
@@ -388,6 +387,10 @@ typedef struct {
      */
     FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
 
+    /**
+     * number of film grain characteristics
+     */
+    UWORD8                                       u1_num_fgc;
 }fgcr_ctl_set_config_ip_t;
 
 typedef struct{
@@ -422,11 +425,6 @@ typedef struct {
      * codec
      */
     UWORD8                                       u1_codec;
-
-    /**
-     * number of film grain characteristics
-     */
-    UWORD8                                       u1_num_fgc;
 }fgcr_ctl_set_codec_ip_t;
 
 typedef struct {
@@ -539,7 +537,7 @@ typedef struct
     FGCR_API_COMMAND_TYPE_T                      e_cmd;
     FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
     UWORD8                                      u1_num_fgc;
-    void                                        *ps_fgs_rewrite_prms[MAX_FGC];
+    void                                        *ps_fgs_rewrite_prms;
 }fgcr_ctl_fgs_rewrite_params_ip_t;
 
 typedef struct

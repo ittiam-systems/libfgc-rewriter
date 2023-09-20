@@ -129,7 +129,7 @@ typedef struct _DecStruct
     UWORD32 u4_fgs_overide_fgc_cancel_flag;
     UWORD32 u4_fgs_overide_log2_scale_factor;
     UWORD32 u4_fgs_overide_dep_comp_model_values;
-    fgcr_set_fgc_params_t  *s_fgs_rewrite_prms[MAX_FGC];
+    fgcr_set_fgc_params_t  *s_fgs_rewrite_prms;
     UWORD8 *temp_mem_holder;
     UWORD8 *ps_u1_upd_buf;
     UWORD32 u4_num_bytes_updated;

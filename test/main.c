@@ -130,7 +130,7 @@ typedef struct
 	UWORD32 u4_fgs_overide_log2_scale_factor;
 	UWORD32 u4_fgs_overide_dep_comp_model_values;
 
-	fgcr_ctl_set_fgc_params_t s_fgs_prms[MAX_FGC];
+	fgcr_ctl_set_fgc_params_t *s_fgs_prms;
 	UWORD8 u1_codec;
 	UWORD8 u1_mode;
 	UWORD8 u1_num_fgc;
@@ -773,15 +773,15 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
         break;
 
     case CODEC:
-        sscanf(value, "%d", &ps_app_ctx->u1_codec);
+        sscanf(value, "%hhu", &ps_app_ctx->u1_codec);
         break;
 
     case MODE:
-        sscanf(value, "%d", &ps_app_ctx->u1_mode);
+        sscanf(value, "%hhu", &ps_app_ctx->u1_mode);
         break;
 
     case NUM_FGC:
-        sscanf(value, "%d", &ps_app_ctx->u1_num_fgc);
+        sscanf(value, "%hhu", &ps_app_ctx->u1_num_fgc);
         break;
 
     case FGC_FILE:
@@ -884,39 +884,41 @@ UWORD32 default_fgs_rewriter_params(vid_dec_ctx_t *ps_app_ctx)
 
     /** Default FGS values if not given by the config file */
     /* FGS parameters */
-    ps_app_ctx->s_fgs_prms[0].u1_film_grain_characteristics_cancel_flag = 1;
-    ps_app_ctx->s_fgs_prms[0].u1_film_grain_model_id = 0;
-    ps_app_ctx->s_fgs_prms[0].u1_separate_colour_description_present_flag = 0;
-    ps_app_ctx->s_fgs_prms[0].u1_film_grain_bit_depth_luma_minus8 = 0;
-    ps_app_ctx->s_fgs_prms[0].u1_film_grain_bit_depth_chroma_minus8 = 0;
-    ps_app_ctx->s_fgs_prms[0].u1_film_grain_full_range_flag = 0;
-    ps_app_ctx->s_fgs_prms[0].u1_film_grain_colour_primaries = 0;
-    ps_app_ctx->s_fgs_prms[0].u1_film_grain_transfer_characteristics = 0;
-    ps_app_ctx->s_fgs_prms[0].u1_film_grain_matrix_coefficients = 0;
-    ps_app_ctx->s_fgs_prms[0].u1_blending_mode_id = 0;
-    ps_app_ctx->s_fgs_prms[0].u1_log2_scale_factor = 2;
-    ps_app_ctx->s_fgs_prms[0].u1_film_grain_characteristics_persistence_flag = 0;
+
+    ps_app_ctx->s_fgs_prms->u1_film_grain_characteristics_cancel_flag = 1;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_model_id = 0;
+    ps_app_ctx->s_fgs_prms->u1_separate_colour_description_present_flag = 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_bit_depth_luma_minus8 = 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_bit_depth_chroma_minus8 = 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_full_range_flag = 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_colour_primaries = 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_transfer_characteristics = 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_matrix_coefficients = 0;
+    ps_app_ctx->s_fgs_prms->u1_blending_mode_id = 0;
+    ps_app_ctx->s_fgs_prms->u1_log2_scale_factor = 2;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_characteristics_persistence_flag = 0;
     for (int c = 0; c < MAX_NUM_COMP; c++)
     {
-        ps_app_ctx->s_fgs_prms[0].u1_comp_model_present_flag[c] = 0;
+        ps_app_ctx->s_fgs_prms->u1_comp_model_present_flag[c] = 0;
     }
 
     for (int c = 0; c < MAX_NUM_COMP; c++)
     {
-        ps_app_ctx->s_fgs_prms[0].u1_num_intensity_intervals_minus1[c] = 0;
-        ps_app_ctx->s_fgs_prms[0].u1_num_model_values_minus1[c] = 0;
+        ps_app_ctx->s_fgs_prms->u1_num_intensity_intervals_minus1[c] = 0;
+        ps_app_ctx->s_fgs_prms->u1_num_model_values_minus1[c] = 0;
         for (int i = 0; i <= MAX_NUM_INTENSITIES; i++)
         {
-            ps_app_ctx->s_fgs_prms[0].u1_intensity_interval_lower_bound[c][i] = 0;
-            ps_app_ctx->s_fgs_prms[0].u1_intensity_interval_upper_bound[c][i] = 0;
+            ps_app_ctx->s_fgs_prms->u1_intensity_interval_lower_bound[c][i] = 0;
+            ps_app_ctx->s_fgs_prms->u1_intensity_interval_upper_bound[c][i] = 0;
             for (int j = 0; j <= MAX_NUM_MODEL_VALUES; j++)
             {
-                ps_app_ctx->s_fgs_prms[0].u4_comp_model_value[c][i][j] = 0;
+                ps_app_ctx->s_fgs_prms->u4_comp_model_value[c][i][j] = 0;
             }
         }
     }
-    ps_app_ctx->s_fgs_prms[0].u4_film_grain_characteristics_repetition_period = 0;
-    ps_app_ctx->s_fgs_prms[0].u1_film_grain_characteristics_persistence_flag = 0;
+
+    ps_app_ctx->s_fgs_prms->u4_film_grain_characteristics_repetition_period = 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_characteristics_persistence_flag = 0;
 
     return 0;
 }
@@ -982,6 +984,7 @@ int main(WORD32 argc, CHAR *argv[])
 	WORD32 total_bytes_comsumed;
 	WORD32 total_bytes_generated;
 	UWORD32 max_op_frm_ts;
+    fgcr_ctl_set_fgc_params_t *ps_fgs_prms = NULL;
 
 #ifdef PROFILE_ENABLE
 	UWORD32 u4_tot_cycles = 0;
@@ -1043,6 +1046,8 @@ int main(WORD32 argc, CHAR *argv[])
 	s_app_ctx.u1_num_fgc = DEFAULT_NUM_FGC;
 	s_app_ctx.u1_fgc_count = 0;
 
+    fgcr_ctl_set_fgc_params_t s_fgs_params;
+    s_app_ctx.s_fgs_prms = &s_fgs_params;
 	default_fgs_rewriter_params(&s_app_ctx);
 
 	s_app_ctx.u1_enable_logs = 0;
@@ -1087,6 +1092,10 @@ int main(WORD32 argc, CHAR *argv[])
 
     if (s_app_ctx.u1_num_fgc > 1)
     {
+        fgcr_ctl_set_fgc_params_t *s_fgs_params;
+        s_fgs_params = (fgcr_ctl_set_fgc_params_t *)malloc(s_app_ctx.u1_num_fgc * sizeof(fgcr_ctl_set_fgc_params_t));
+        s_app_ctx.s_fgs_prms = s_fgs_params;
+
         strcpy(ac_fgc_fname, s_app_ctx.ac_fgc_file_fname);
         if ((fp_fgc_file = fopen(ac_fgc_fname, "r")) == NULL)
         {
@@ -1199,7 +1208,6 @@ int main(WORD32 argc, CHAR *argv[])
 		s_ctl_ip.e_sub_cmd = FGCR_CMD_CTL_SETCODEC;
 		s_ctl_ip.u4_size = sizeof(fgcr_ctl_set_codec_ip_t);
 		s_ctl_ip.u1_codec = s_app_ctx.u1_codec;
-		s_ctl_ip.u1_num_fgc = s_app_ctx.u1_num_fgc;
 
 		s_ctl_op.u4_size = sizeof(fgcr_ctl_set_codec_op_t);
 
@@ -1277,18 +1285,14 @@ int main(WORD32 argc, CHAR *argv[])
 
 			fgcr_ctl_fgs_rewrite_params_ip_t s_ctl_fgs_rewrite_ip;
 			fgcr_ctl_set_fgs_params_op_t     s_ctl_fgs_rewrite_op;
-			fgcr_ctl_set_fgc_params_t *ps_fgs_prms[MAX_FGC];
+            ps_fgs_prms = (fgcr_ctl_set_fgc_params_t *)malloc(s_app_ctx.u1_num_fgc * sizeof(fgcr_ctl_set_fgc_params_t));
 
 			s_ctl_fgs_rewrite_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
 			s_ctl_fgs_rewrite_ip.e_sub_cmd = (FGCR_CONTROL_API_COMMAND_TYPE_T)FGCR_CMD_CTL_SET_FGS_FOR_REWRITE;
 			s_ctl_fgs_rewrite_ip.u1_num_fgc = s_app_ctx.u1_num_fgc;
 			
-
-			for (int i = 0; i < s_app_ctx.u1_num_fgc; i++)
-			{
-				ps_fgs_prms[i] = &s_app_ctx.s_fgs_prms[i];
-				s_ctl_fgs_rewrite_ip.ps_fgs_rewrite_prms[i] = (void *)ps_fgs_prms[i];
-			}
+            memcpy(ps_fgs_prms, s_app_ctx.s_fgs_prms, s_app_ctx.u1_num_fgc * sizeof(fgcr_ctl_set_fgc_params_t));
+            s_ctl_fgs_rewrite_ip.ps_fgs_rewrite_prms = (void *)ps_fgs_prms;
 			ret = ivd_api_function((iv_obj_t*)codec_obj, (void *)&s_ctl_fgs_rewrite_ip,
 				(void *)&s_ctl_fgs_rewrite_op);
 			if (ret != IV_SUCCESS)
@@ -1310,6 +1314,7 @@ int main(WORD32 argc, CHAR *argv[])
 		s_ctl_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
 		s_ctl_ip.e_sub_cmd = FGCR_CMD_CTL_SETPARAMS;
 		s_ctl_ip.u4_size = sizeof(fgcr_ctl_set_config_ip_t);
+        s_ctl_ip.u1_num_fgc = s_app_ctx.u1_num_fgc;
 
 		s_ctl_op.u4_size = sizeof(fgcr_ctl_set_config_op_t);
 
@@ -1564,6 +1569,7 @@ int main(WORD32 argc, CHAR *argv[])
 
 	free(pu1_bs_buf);
 	free(pu1_bsu_buf);
+    free(ps_fgs_prms);
 
 	return (0);
 }

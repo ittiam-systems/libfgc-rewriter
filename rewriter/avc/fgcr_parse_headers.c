@@ -248,6 +248,7 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                         break;
                     default:
 
+                        ps_dec->u1_fgc_present_before_idr_cra_flag = 0;
                         *pu1_upd_buf += u4_length;
                         ps_dec_op->u4_num_bytes_generated += u4_length;
                         i4_bits_left_in_cw -= (u4_length << 3);
@@ -303,7 +304,7 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                                 if ((ps_dec->u2_first_mb_in_slice == 0) && (ps_dec->u4_fgs_enable_rewriter))
                                 {
                                     ps_dec->frm_counts++;
-                                    if (ps_dec->frm_counts == ps_dec->frm_SEI_counts)
+                                    if (ps_dec->u1_fgc_present_before_idr_cra_flag == 1)
                                     {
                                         *pu1_upd_buf += u4_length;
                                         ps_dec_op->u4_num_bytes_generated += u4_length;
@@ -314,7 +315,7 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                                         }
                                     }
                                     //Either SEI or FGS is not present
-                                    else if ((ps_dec->frm_counts - 1) == ps_dec->frm_SEI_counts)
+                                    else
                                     {
                                         UWORD8 *temp_holder = ps_dec->temp_mem_holder;
                                         memcpy(temp_holder, *pu1_upd_buf - 4, u4_length + 4);
@@ -326,7 +327,7 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                                         ps_bitstream.i4_zero_bytes_run = 0;
                                         ps_bitstream.u4_max_strm_size = 10000;
                                         i_status = i264_generate_sei_message(&ps_bitstream,
-                                            ps_dec->s_fgs_rewrite_prms[ps_dec->frm_SEI_counts%num_fgc]);
+                                            (ps_dec->s_fgs_rewrite_prms + (ps_dec->frm_SEI_counts%num_fgc)));
                                         if (i_status != OK)
                                         {
                                             return i_status;
@@ -337,10 +338,6 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                                         *pu1_upd_buf += u4_length + 4;
                                         ps_dec_op->u4_num_bytes_generated +=
                                             u4_length + 4 + ps_bitstream.u4_strm_buf_offset;
-                                    }
-                                    else
-                                    {
-                                        return NOT_OK;
                                     }
                                 }
                                 else
@@ -366,6 +363,7 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                             *pu1_upd_buf += u4_length;
                             ps_dec_op->u4_num_bytes_generated += u4_length;
                         }
+                        ps_dec->u1_fgc_present_before_idr_cra_flag = 0;
                         break;
 
                     case SEI_NAL:
@@ -510,7 +508,7 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                                         ps_bitstream.i4_zero_bytes_run = 0;
                                         ps_bitstream.u4_max_strm_size = 10000;
                                         i_status = i265_generate_sei_message(&ps_bitstream,
-                                            ps_dec->s_fgs_rewrite_prms[ps_dec->frm_SEI_counts%num_fgc], 0);
+                                            (ps_dec->s_fgs_rewrite_prms + (ps_dec->frm_SEI_counts%num_fgc)), 0);
                                         if (i_status != OK)
                                         {
                                             return i_status;
