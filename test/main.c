@@ -1397,7 +1397,8 @@ int main(WORD32 argc, CHAR *argv[])
 				
 				ps_fgc_export_prms = &ps_fgc_export_prms_default;
 
-				s_ctl_fgc_export_ip.e_cmd = FGCR_CMD_EXPORT;
+                s_ctl_fgc_export_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
+                s_ctl_fgc_export_ip.e_sub_cmd = FGCR_CMD_CTL_EXPORT;
 				s_ctl_fgc_export_ip.ps_fgc_export_prms = (void *)ps_fgc_export_prms;
 				s_ctl_fgc_export_ip.u4_size = sizeof(fgcr_ctl_fgc_export_ip_t);
 

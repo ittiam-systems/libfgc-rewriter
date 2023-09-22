@@ -152,7 +152,6 @@ static IV_API_CALL_STATUS_T api_check_struct_sanity(iv_obj_t *ps_handle,
 		break;
 
 	case FGCR_CMD_VIDEO_REWRITE:
-	case FGCR_CMD_EXPORT:
 	case FGCR_CMD_DELETE:
 	case FGCR_CMD_VIDEO_CTL:
 		if (ps_handle == NULL)
@@ -281,33 +280,6 @@ static IV_API_CALL_STATUS_T api_check_struct_sanity(iv_obj_t *ps_handle,
 	}
 	break;
 
-    case FGCR_CMD_EXPORT:
-    {
-        fgcr_ctl_fgc_export_ip_t *ps_ip = (fgcr_ctl_fgc_export_ip_t *)pv_api_ip;
-        fgcr_ctl_fgc_export_op_t *ps_op = (fgcr_ctl_fgc_export_op_t *)pv_api_op;
-
-        ps_op->u4_error_code = 0;
-
-        if (ps_ip->u4_size != sizeof(fgcr_ctl_fgc_export_ip_t))
-        {
-            ps_op->u4_error_code |= 1
-                << FGCR_UNSUPPORTEDPARAM;
-            ps_op->u4_error_code |=
-                FGCR_IP_API_STRUCT_SIZE_INCORRECT;
-            return (IV_FAIL);
-        }
-
-        if (ps_op->u4_size != sizeof(fgcr_ctl_fgc_export_op_t))
-        {
-            ps_op->u4_error_code |= 1
-                << FGCR_UNSUPPORTEDPARAM;
-            ps_op->u4_error_code |=
-                FGCR_OP_API_STRUCT_SIZE_INCORRECT;
-            return (IV_FAIL);
-        }
-    }
-    break;
-
 	case FGCR_CMD_VIDEO_CTL:
 	{
 		UWORD32 *pu4_ptr_cmd;
@@ -396,6 +368,34 @@ static IV_API_CALL_STATUS_T api_check_struct_sanity(iv_obj_t *ps_handle,
 		}
 		case FGCR_CMD_CTL_SET_FGS_FOR_REWRITE:
 			break;
+
+        case FGCR_CMD_CTL_EXPORT:
+        {
+            fgcr_ctl_fgc_export_ip_t *ps_ip = (fgcr_ctl_fgc_export_ip_t *)pv_api_ip;
+            fgcr_ctl_fgc_export_op_t *ps_op = (fgcr_ctl_fgc_export_op_t *)pv_api_op;
+
+            ps_op->u4_error_code = 0;
+
+            if (ps_ip->u4_size != sizeof(fgcr_ctl_fgc_export_ip_t))
+            {
+                ps_op->u4_error_code |= 1
+                    << FGCR_UNSUPPORTEDPARAM;
+                ps_op->u4_error_code |=
+                    FGCR_IP_API_STRUCT_SIZE_INCORRECT;
+                return (IV_FAIL);
+            }
+
+            if (ps_op->u4_size != sizeof(fgcr_ctl_fgc_export_op_t))
+            {
+                ps_op->u4_error_code |= 1
+                    << FGCR_UNSUPPORTEDPARAM;
+                ps_op->u4_error_code |=
+                    FGCR_OP_API_STRUCT_SIZE_INCORRECT;
+                return (IV_FAIL);
+            }
+        }
+        break;
+
 		default:
 			*(pu4_api_op + 1) |= 1 << FGCR_UNSUPPORTEDPARAM;
 			*(pu4_api_op + 1) |= FGCR_UNSUPPORTED_API_CMD;
@@ -1098,6 +1098,9 @@ IV_API_CALL_STATUS_T fgcr_ctl(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_api_o
 	case FGCR_CMD_CTL_SET_FGS_FOR_REWRITE:
 		ret = fgcr_set_fgs_rewrite_params(dec_hdl, (void *)pv_api_ip, (void *)pv_api_op);
 		break;
+    case FGCR_CMD_CTL_EXPORT:
+        ret = fgcr_export(dec_hdl, (void *)pv_api_ip, (void *)pv_api_op);
+        break;
 	default:
 		H264_DEC_DEBUG_PRINT("\ndo nothing\n");
 		break;
@@ -1433,11 +1436,6 @@ IV_API_CALL_STATUS_T fgcr_api_function(
 	case FGCR_CMD_VIDEO_REWRITE:
 		// TODO add new function here  u4_api_ret = 1;
 		u4_api_ret = fgcr_video_rewrite(dec_hdl, (void *)pv_api_ip,
-			(void *)pv_api_op);
-		break;
-
-	case FGCR_CMD_EXPORT:
-		u4_api_ret = fgcr_export(dec_hdl, (void *)pv_api_ip,
 			(void *)pv_api_op);
 		break;
 

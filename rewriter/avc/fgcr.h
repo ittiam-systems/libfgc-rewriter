@@ -151,8 +151,7 @@ typedef enum {
     FGCR_CMD_CREATE                            = 1,
     FGCR_CMD_DELETE,
     FGCR_CMD_VIDEO_CTL,
-    FGCR_CMD_VIDEO_REWRITE,
-    FGCR_CMD_EXPORT
+    FGCR_CMD_VIDEO_REWRITE
 }FGCR_API_COMMAND_TYPE_T;
 
 /* FGCR_CONTROL_API_COMMAND_TYPE_T: Video Control API command type            */
@@ -160,6 +159,7 @@ typedef enum {
 typedef enum {
     FGCR_CMD_NA                          = 0x7FFFFFFF,
     FGCR_CMD_CTL_SETPARAMS               = 0x1,
+    FGCR_CMD_CTL_EXPORT                  = 0x2,
     FGCR_CMD_CTL_GETVERSION              = 0x6,
     FGCR_CMD_CTL_CODEC_SUBCMD_START      = 0x7
 }FGCR_CONTROL_API_COMMAND_TYPE_T;
@@ -514,6 +514,7 @@ typedef struct
 {
     UWORD32                                     u4_size;
     FGCR_API_COMMAND_TYPE_T                      e_cmd;
+    FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
     void                                        *ps_fgc_export_prms;
 }fgcr_ctl_fgc_export_ip_t;
 
