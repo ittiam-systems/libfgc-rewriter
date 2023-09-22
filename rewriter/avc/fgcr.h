@@ -503,23 +503,79 @@ typedef struct
 
 typedef struct
 {
+    /**
+    * u4_size of the structure
+    */
     UWORD32                                     u4_size;
+
+    /**
+    * cmd
+    */
     FGCR_API_COMMAND_TYPE_T                      e_cmd;
+
+    /**
+    * sub_cmd
+    */
     FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
+
+    /**
+    * Number of film grain characteristics
+    */
     UWORD8                                      u1_num_fgc;
+
+    /**
+    * Film grain characteristics parameters buffer
+    */
     void                                        *ps_fgs_rewrite_prms;
+
+    /**
+    * Pointer to a function for aligned allocation.
+    */
+    void    *(*pf_aligned_alloc)(void *pv_mem_ctxt, WORD32 alignment, WORD32 size);
+
+    /**
+     * Pointer to memory context that is needed during alloc/free for custom
+     * memory managers. This will be passed as first argument to pf_aligned_alloc and
+     * pf_aligned_free.
+     * If application is using standard memory functions like
+     * malloc/aligned_malloc/memalign/free/aligned_free,
+     * then this is not needed and can be set to NULL
+     */
+    void    *pv_mem_ctxt;
 }fgcr_ctl_fgs_rewrite_params_ip_t;
 
 typedef struct
 {
+    /**
+    * u4_size of the structure
+    */
     UWORD32                                     u4_size;
+
+    /**
+    * cmd
+    */
     FGCR_API_COMMAND_TYPE_T                      e_cmd;
+
+    /**
+    * sub_cmd
+    */
     FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
+
+    /**
+    * Film grain characteristics parameters buffer
+    */
     void                                        *ps_fgc_export_prms;
 }fgcr_ctl_fgc_export_ip_t;
 
 typedef struct {
+    /**
+    * u4_size of the structure
+    */
     UWORD32                                     u4_size;
+
+    /**
+     * error code
+     */
     UWORD32                                     u4_error_code;
 }fgcr_ctl_fgc_export_op_t;
 

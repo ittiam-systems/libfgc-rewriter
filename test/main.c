@@ -1291,6 +1291,8 @@ int main(WORD32 argc, CHAR *argv[])
 			s_ctl_fgs_rewrite_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
 			s_ctl_fgs_rewrite_ip.e_sub_cmd = (FGCR_CONTROL_API_COMMAND_TYPE_T)FGCR_CMD_CTL_SET_FGS_FOR_REWRITE;
 			s_ctl_fgs_rewrite_ip.u1_num_fgc = s_app_ctx.u1_num_fgc;
+            s_ctl_fgs_rewrite_ip.pf_aligned_alloc = fgcr_aligned_malloc;
+            s_ctl_fgs_rewrite_ip.pv_mem_ctxt = NULL;
 			
             memcpy(ps_fgs_prms, s_app_ctx.s_fgs_prms, s_app_ctx.u1_num_fgc * sizeof(fgcr_ctl_set_fgc_params_t));
             s_ctl_fgs_rewrite_ip.ps_fgs_rewrite_prms = (void *)ps_fgs_prms;

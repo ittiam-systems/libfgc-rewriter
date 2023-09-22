@@ -1349,17 +1349,25 @@ IV_API_CALL_STATUS_T fgcr_set_fgs_rewrite_params(
 {
 	fgcr_ctl_fgs_rewrite_params_ip_t *ps_ip;
 	fgcr_ctl_set_fgs_params_op_t     *ps_op;
+    void *(*pf_aligned_alloc)(void *pv_mem_ctxt, WORD32 alignment, WORD32 size);
+    void *pv_mem_ctxt;
+    void *pv_buf;
 	dec_struct_t *ps_dec = (dec_struct_t *)dec_hdl->pv_codec_handle;
 	WORD32 i_status = IV_SUCCESS;
 	ps_ip = (fgcr_ctl_fgs_rewrite_params_ip_t *)pv_api_ip;
 	ps_op = (fgcr_ctl_set_fgs_params_op_t *)pv_api_op;
+
+    pf_aligned_alloc = ps_ip->pf_aligned_alloc;
+    pv_mem_ctxt = ps_ip->pv_mem_ctxt;
 
 	ps_op->u4_error_code = ERROR_UNSUPPORTED_SEI_FGS_REWRITE_PARAMS;
 	switch ((FGCR_CMD_CTL_SUB_CMDS)ps_ip->e_sub_cmd)
 	{
 	case FGCR_CMD_CTL_SET_FGS_FOR_REWRITE:
 	{
-        ps_dec->s_fgs_rewrite_prms = (fgcr_set_fgc_params_t*)malloc(ps_ip->u1_num_fgc * sizeof(fgcr_set_fgc_params_t));
+        pv_buf = pf_aligned_alloc(pv_mem_ctxt, 128, ps_ip->u1_num_fgc * sizeof(fgcr_set_fgc_params_t));
+        RETURN_IF((NULL == pv_buf), IV_FAIL);
+        ps_dec->s_fgs_rewrite_prms = (fgcr_set_fgc_params_t*)pv_buf;
         memcpy(ps_dec->s_fgs_rewrite_prms, (fgcr_set_fgc_params_t*)ps_ip->ps_fgs_rewrite_prms, ps_ip->u1_num_fgc * sizeof(fgcr_set_fgc_params_t));
 		for (int i = 0; i < ps_ip->u1_num_fgc; i++)
 		{
