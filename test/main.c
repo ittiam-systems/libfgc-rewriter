@@ -1217,7 +1217,7 @@ int main(WORD32 argc, CHAR *argv[])
         if (IV_SUCCESS != ret)
         {
             sprintf(ac_error_str, "Error in Set Parameters");
-            //codec_exit(ac_error_str);
+            codec_exit(ac_error_str);
         }
     }
 

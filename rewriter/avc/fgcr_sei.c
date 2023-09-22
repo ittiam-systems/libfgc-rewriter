@@ -89,7 +89,7 @@ WORD32 ih264d_parse_fgc_params(dec_bit_stream_t *ps_bitstrm,
     UWORD32 i;
     UWORD32 j;
 
-    UWORD8 codec = ps_dec->codec;
+    UWORD8 u1_codec = ps_dec->u1_codec;
 
     ps_sei->s_fgc_params.u4_fgc_sei_present_flag = 0;
 
@@ -232,7 +232,7 @@ WORD32 ih264d_parse_fgc_params(dec_bit_stream_t *ps_bitstrm,
             }
         }
 
-        if (codec == AVC)
+        if (u1_codec == AVC)
         {
             ps_sei->s_fgc_params.u4_film_grain_characteristics_repetition_period =
                 (UWORD32)ih264d_uev(pu4_bitstrm_ofst, pu4_bitstrm_buf);
@@ -243,7 +243,7 @@ WORD32 ih264d_parse_fgc_params(dec_bit_stream_t *ps_bitstrm,
                 return 0;
             }
         }
-        else if (codec == HEVC)
+        else if (u1_codec == HEVC)
         {
             ps_sei->s_fgc_params.u1_film_grain_characteristics_persistence_flag = (UWORD8)ih264d_get_bit_h264(ps_bitstrm);
         }
@@ -328,7 +328,7 @@ WORD32 ih264d_parse_sei_payload(dec_bit_stream_t *ps_bitstrm,
                                 dec_struct_t *ps_dec)
 {
     WORD32 i4_status = 0;
-    UWORD8 codec = ps_dec->codec;
+    UWORD8 u1_codec = ps_dec->u1_codec;
 
     switch(ui4_payload_type)
     {
@@ -348,11 +348,11 @@ WORD32 ih264d_parse_sei_payload(dec_bit_stream_t *ps_bitstrm,
                 ps_bitstream.i4_zero_bytes_run = 0;
                 ps_bitstream.u4_max_strm_size = 10000;
                 i_status = update_FGS_rewrite_str(ps_dec);
-                if (codec == AVC)
+                if (u1_codec == AVC)
                 {
                     i_status = i264_generate_sei_message(&ps_bitstream, (ps_dec->s_fgs_rewrite_prms + (ps_dec->frm_SEI_counts%ps_dec->u1_num_fgc)));
                 }
-                else if (codec == HEVC)
+                else if (u1_codec == HEVC)
                 {
                     i_status = i265_generate_sei_message(&ps_bitstream, (ps_dec->s_fgs_rewrite_prms + (ps_dec->frm_SEI_counts%ps_dec->u1_num_fgc)), (ps_dec->u1_nuh_temporal_id_plus1 - 1));
                 }

@@ -187,7 +187,7 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
     UWORD8 **pu1_upd_buf,
     UWORD32 u4_length,
     UWORD32 u4_length_of_start_code,
-    UWORD8 codec)
+    UWORD8 u1_codec)
 {
     dec_bit_stream_t *ps_bitstrm;
     static WORD32 i4_bits_left_in_cw = WORD_SIZE;
@@ -203,9 +203,9 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
         if (u4_length)
         {
             ih264d_process_nal_unit(ps_dec->ps_bitstrm, pu1_buf,
-                u4_length, codec);
+                u4_length, u1_codec);
             u1_first_byte = ih264d_get_bits_h264(ps_bitstrm, 8);
-            if (codec == HEVC)
+            if (u1_codec == HEVC)
             {
                 u1_second_byte = ih264d_get_bits_h264(ps_bitstrm, 8);
             }
@@ -214,28 +214,28 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
             {
                 H264_DEC_DEBUG_PRINT("\nForbidden bit set in Nal Unit, Let's try\n");
             }
-            if (codec == AVC)
+            if (u1_codec == AVC)
             {
                 u1_nal_unit_type = NAL_UNIT_TYPE_AVC(u1_first_byte);
             }
-            else if (codec == HEVC)
+            else if (u1_codec == HEVC)
             {
                 u1_nal_unit_type = NAL_UNIT_TYPE_HEVC(u1_first_byte);
             }
 
             ps_dec->u1_nal_unit_type = u1_nal_unit_type;
 
-            if (codec == AVC)
+            if (u1_codec == AVC)
             {
                 u1_nal_ref_idc = (UWORD8)(NAL_REF_IDC(u1_first_byte));
             }
-            if (codec == HEVC)
+            if (u1_codec == HEVC)
             {
                 u1_nuh_temporal_id_plus1 = NUH_TEMPORAL_ID_PLUS1(u1_second_byte);
                 ps_dec->u1_nuh_temporal_id_plus1 = u1_nuh_temporal_id_plus1;
             }
 
-            if (codec == AVC)
+            if (u1_codec == AVC)
             {
                 //Skip all NALUs if SPS and PPS are not decoded
                 {
@@ -425,7 +425,7 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                     }
                 }
             }
-            else if (codec == HEVC)
+            else if (u1_codec == HEVC)
             {
                 //Skip all NALUs if SPS and PPS are not decoded
                 {

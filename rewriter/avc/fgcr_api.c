@@ -701,7 +701,7 @@ IV_API_CALL_STATUS_T fgcr_video_rewrite(iv_obj_t *dec_hdl, void *pv_api_ip, void
 	WORD32 ret = 0;
 	IV_API_CALL_STATUS_T api_ret_value = IV_SUCCESS;
 	WORD32 header_data_left = 0, frame_data_left = 0;
-	UWORD8 codec = ps_dec->codec;
+	UWORD8 u1_codec = ps_dec->u1_codec;
 	UWORD8 *pu1_bitstrm_buf;
 	UWORD8 *pu1_upd_bitstrm_buf;
 	fgcr_video_rewrite_ip_t    *ps_h264_dec_ip;
@@ -794,7 +794,7 @@ IV_API_CALL_STATUS_T fgcr_video_rewrite(iv_obj_t *dec_hdl, void *pv_api_ip, void
 
 		buflen = ih264d_find_start_code(pu1_buf, 0, u4_max_ofst,
 			&u4_length_of_start_code,
-			&u4_next_is_aud, codec);
+			&u4_next_is_aud, u1_codec);
 
 		if (buflen == -1)
 		{
@@ -848,7 +848,7 @@ IV_API_CALL_STATUS_T fgcr_video_rewrite(iv_obj_t *dec_hdl, void *pv_api_ip, void
 
 		ps_dec_op->pv_stream_out_buffer = ps_dec_ip->pv_stream_out_buffer;
 
-		ret = ih264d_parse_nal_unit_for_rewriter(dec_hdl, ps_dec_op, pu1_bitstrm_buf, &pu1_upd_bitstrm_buf, buflen, u4_length_of_start_code, codec);
+		ret = ih264d_parse_nal_unit_for_rewriter(dec_hdl, ps_dec_op, pu1_bitstrm_buf, &pu1_upd_bitstrm_buf, buflen, u4_length_of_start_code, u1_codec);
 
 		if (ret != OK)
 		{
@@ -941,11 +941,11 @@ IV_API_CALL_STATUS_T fgcr_export(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_ap
         }
     }
 
-    if (ps_dec->codec == AVC)
+    if (ps_dec->u1_codec == AVC)
     {
         fgc_export_params->u4_film_grain_characteristics_repetition_period = ps_sei->s_fgc_params.u4_film_grain_characteristics_repetition_period;
     }
-    else if(ps_dec->codec == HEVC)
+    else if(ps_dec->u1_codec == HEVC)
     {
         fgc_export_params->u1_film_grain_characteristics_persistence_flag = ps_sei->s_fgc_params.u1_film_grain_characteristics_persistence_flag;
     }
@@ -1017,7 +1017,7 @@ IV_API_CALL_STATUS_T fgcr_set_params(iv_obj_t *dec_hdl, void *pv_api_ip, void *p
 	ps_ctl_op->u4_error_code = 0;
 
 	ps_dec->i4_decode_header = 0;
-    ps_dec->codec = ps_ctl_ip->u1_codec;
+    ps_dec->u1_codec = ps_ctl_ip->u1_codec;
     ps_dec->u1_num_fgc = ps_ctl_ip->u1_num_fgc;
 
 	return ret;
