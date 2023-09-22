@@ -339,32 +339,6 @@ static IV_API_CALL_STATUS_T api_check_struct_sanity(iv_obj_t *ps_handle,
 
 		break;
 
-		case FGCR_CMD_CTL_SETCODEC:
-        {
-            fgcr_ctl_set_codec_ip_t *ps_ip;
-            fgcr_ctl_set_codec_op_t *ps_op;
-
-            ps_ip = (fgcr_ctl_set_codec_ip_t *)pv_api_ip;
-            ps_op = (fgcr_ctl_set_codec_op_t *)pv_api_op;
-
-            if (ps_ip->u4_size != sizeof(fgcr_ctl_set_codec_ip_t))
-            {
-                ps_op->u4_error_code |= 1 << FGCR_UNSUPPORTEDPARAM;
-                ps_op->u4_error_code |=
-                    FGCR_IP_API_STRUCT_SIZE_INCORRECT;
-                return IV_FAIL;
-            }
-
-            if (ps_op->u4_size != sizeof(fgcr_ctl_set_codec_op_t))
-            {
-                ps_op->u4_error_code |= 1 << FGCR_UNSUPPORTEDPARAM;
-                ps_op->u4_error_code |=
-                    FGCR_OP_API_STRUCT_SIZE_INCORRECT;
-                return IV_FAIL;
-            }
-            break;
-        }
-
 		case FGCR_CMD_CTL_GETVERSION:
 		{
 			fgcr_ctl_getversioninfo_ip_t *ps_ip;
@@ -1043,24 +1017,10 @@ IV_API_CALL_STATUS_T fgcr_set_params(iv_obj_t *dec_hdl, void *pv_api_ip, void *p
 	ps_ctl_op->u4_error_code = 0;
 
 	ps_dec->i4_decode_header = 0;
+    ps_dec->codec = ps_ctl_ip->u1_codec;
     ps_dec->u1_num_fgc = ps_ctl_ip->u1_num_fgc;
 
 	return ret;
-}
-
-IV_API_CALL_STATUS_T fgcr_set_codec(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_api_op)
-{
-    dec_struct_t * ps_dec;
-    IV_API_CALL_STATUS_T ret = IV_SUCCESS;
-
-    fgcr_ctl_set_codec_ip_t *ps_ctl_ip = (fgcr_ctl_set_codec_ip_t *)pv_api_ip;
-    fgcr_ctl_set_codec_op_t *ps_ctl_op = (fgcr_ctl_set_codec_op_t *)pv_api_op;
-
-    ps_dec = (dec_struct_t *)(dec_hdl->pv_codec_handle);
-
-    ps_dec->codec = ps_ctl_ip->u1_codec;
-
-    return ret;
 }
 
 
@@ -1125,9 +1085,6 @@ IV_API_CALL_STATUS_T fgcr_ctl(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_api_o
 	{
 	case FGCR_CMD_CTL_SETPARAMS:
 		ret = fgcr_set_params(dec_hdl, (void *)pv_api_ip, (void *)pv_api_op);
-		break;
-	case FGCR_CMD_CTL_SETCODEC:
-		ret = fgcr_set_codec(dec_hdl, (void *)pv_api_ip, (void *)pv_api_op);
 		break;
 	case FGCR_CMD_CTL_GETVERSION:
 		ret = fgcr_get_version(dec_hdl, (void *)pv_api_ip, (void *)pv_api_op);

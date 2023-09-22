@@ -160,7 +160,6 @@ typedef enum {
 typedef enum {
     FGCR_CMD_NA                          = 0x7FFFFFFF,
     FGCR_CMD_CTL_SETPARAMS               = 0x1,
-    FGCR_CMD_CTL_SETCODEC                = 0x2,
     FGCR_CMD_CTL_GETVERSION              = 0x6,
     FGCR_CMD_CTL_CODEC_SUBCMD_START      = 0x7
 }FGCR_CONTROL_API_COMMAND_TYPE_T;
@@ -388,6 +387,11 @@ typedef struct {
     FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
 
     /**
+     * codec
+     */
+    UWORD8                                       u1_codec;
+
+    /**
      * number of film grain characteristics
      */
     UWORD8                                       u1_num_fgc;
@@ -404,40 +408,6 @@ typedef struct{
      */
 	UWORD32                                     u4_error_code;
 }fgcr_ctl_set_config_op_t;
-
-typedef struct {
-    /**
-     * u4_size of the structure
-     */
-    UWORD32                                     u4_size;
-
-    /**
-     * cmd
-     */
-    FGCR_API_COMMAND_TYPE_T                      e_cmd;
-
-    /**
-     * sub_cmd
-     */
-    FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
-
-    /**
-     * codec
-     */
-    UWORD8                                       u1_codec;
-}fgcr_ctl_set_codec_ip_t;
-
-typedef struct {
-    /**
-     * u4_size of the structure
-     */
-    UWORD32                                     u4_size;
-
-    /**
-     * u4_error_code
-     */
-    UWORD32                                     u4_error_code;
-}fgcr_ctl_set_codec_op_t;
 
 /*****************************************************************************/
 /*   Rewriter control:Get Version Info                                       */

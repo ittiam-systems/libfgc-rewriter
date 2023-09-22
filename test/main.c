@@ -1198,27 +1198,28 @@ int main(WORD32 argc, CHAR *argv[])
 	}
 
 	/*************************************************************************/
-	/* set Codec                                                  */
+	/* set Codec and number of film grain characteristics                                                  */
 	/*************************************************************************/
-	{
-		fgcr_ctl_set_codec_ip_t s_ctl_ip;
-		fgcr_ctl_set_codec_op_t s_ctl_op;
+    {
+        fgcr_ctl_set_config_ip_t s_ctl_ip;
+        fgcr_ctl_set_config_op_t s_ctl_op;
 
-		s_ctl_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
-		s_ctl_ip.e_sub_cmd = FGCR_CMD_CTL_SETCODEC;
-		s_ctl_ip.u4_size = sizeof(fgcr_ctl_set_codec_ip_t);
-		s_ctl_ip.u1_codec = s_app_ctx.u1_codec;
+        s_ctl_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
+        s_ctl_ip.e_sub_cmd = FGCR_CMD_CTL_SETPARAMS;
+        s_ctl_ip.u4_size = sizeof(fgcr_ctl_set_config_ip_t);
+        s_ctl_ip.u1_codec = s_app_ctx.u1_codec;
+        s_ctl_ip.u1_num_fgc = s_app_ctx.u1_num_fgc;
 
-		s_ctl_op.u4_size = sizeof(fgcr_ctl_set_codec_op_t);
+        s_ctl_op.u4_size = sizeof(fgcr_ctl_set_config_op_t);
 
-		ret = ivd_api_function((iv_obj_t *)codec_obj, (void *)&s_ctl_ip, (void *)&s_ctl_op);
+        ret = ivd_api_function((iv_obj_t *)codec_obj, (void *)&s_ctl_ip, (void *)&s_ctl_op);
 
-		if (IV_SUCCESS != ret)
-		{
-			sprintf(ac_error_str, "Error in Set Codec");
-			//codec_exit(ac_error_str);
-		}
-	}
+        if (IV_SUCCESS != ret)
+        {
+            sprintf(ac_error_str, "Error in Set Parameters");
+            //codec_exit(ac_error_str);
+        }
+    }
 
 	if (s_app_ctx.u1_mode == FGC_EXPORT)
 		s_app_ctx.u4_fgs_enable_rewriter = 0;
@@ -1307,25 +1308,7 @@ int main(WORD32 argc, CHAR *argv[])
 	/* Set the decoder in frame decode mode. It was set in header decode     */
 	/* mode earlier                                                          */
 	/*************************************************************************/
-	{
-		fgcr_ctl_set_config_ip_t s_ctl_ip;
-		fgcr_ctl_set_config_op_t s_ctl_op;
 
-		s_ctl_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
-		s_ctl_ip.e_sub_cmd = FGCR_CMD_CTL_SETPARAMS;
-		s_ctl_ip.u4_size = sizeof(fgcr_ctl_set_config_ip_t);
-        s_ctl_ip.u1_num_fgc = s_app_ctx.u1_num_fgc;
-
-		s_ctl_op.u4_size = sizeof(fgcr_ctl_set_config_op_t);
-
-		ret = ivd_api_function((iv_obj_t *)codec_obj, (void *)&s_ctl_ip, (void *)&s_ctl_op);
-
-		if (IV_SUCCESS != ret)
-		{
-			sprintf(ac_error_str, "Error in Set Parameters");
-			//codec_exit(ac_error_str);
-		}
-	}
 
 #ifdef WINDOWS_TIMER
 	QueryPerformanceFrequency(&frequency);
