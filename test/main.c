@@ -1207,7 +1207,7 @@ int main(WORD32 argc, CHAR *argv[])
         s_ctl_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
         s_ctl_ip.e_sub_cmd = FGCR_CMD_CTL_SETPARAMS;
         s_ctl_ip.u4_size = sizeof(fgcr_ctl_set_config_ip_t);
-        s_ctl_ip.u1_codec = s_app_ctx.u1_codec;
+        s_ctl_ip.u1_codec = (CODEC_T)s_app_ctx.u1_codec;
         s_ctl_ip.u1_num_fgc = s_app_ctx.u1_num_fgc;
 
         s_ctl_op.u4_size = sizeof(fgcr_ctl_set_config_op_t);
@@ -1290,7 +1290,6 @@ int main(WORD32 argc, CHAR *argv[])
 
 			s_ctl_fgs_rewrite_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
 			s_ctl_fgs_rewrite_ip.e_sub_cmd = (FGCR_CONTROL_API_COMMAND_TYPE_T)FGCR_CMD_CTL_SET_FGS_FOR_REWRITE;
-			s_ctl_fgs_rewrite_ip.u1_num_fgc = s_app_ctx.u1_num_fgc;
             s_ctl_fgs_rewrite_ip.pf_aligned_alloc = fgcr_aligned_malloc;
             s_ctl_fgs_rewrite_ip.pv_mem_ctxt = NULL;
 			
@@ -1401,7 +1400,7 @@ int main(WORD32 argc, CHAR *argv[])
 
                 s_ctl_fgc_export_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
                 s_ctl_fgc_export_ip.e_sub_cmd = FGCR_CMD_CTL_EXPORT;
-				s_ctl_fgc_export_ip.ps_fgc_export_prms = (void *)ps_fgc_export_prms;
+				s_ctl_fgc_export_ip.ps_fgc_export_prms = ps_fgc_export_prms;
 				s_ctl_fgc_export_ip.u4_size = sizeof(fgcr_ctl_fgc_export_ip_t);
 
 				s_ctl_fgc_export_op.u4_size = sizeof(fgcr_ctl_fgc_export_op_t);
@@ -1410,7 +1409,7 @@ int main(WORD32 argc, CHAR *argv[])
 				ret = ivd_api_function((iv_obj_t *)codec_obj, (void *)&s_ctl_fgc_export_ip,
 					(void *)&s_ctl_fgc_export_op);
 
-				ps_fgc_export_prms = (fgcr_ctl_set_fgc_params_t *)s_ctl_fgc_export_ip.ps_fgc_export_prms;
+				ps_fgc_export_prms = (fgcr_ctl_set_fgc_params_t *)s_ctl_fgc_export_op.ps_fgc_export_prms;
 
 				fprintf(ps_fgc_export_file, "----------------------------------------------------------------------\n");
 				fprintf(ps_fgc_export_file, "FGC %d \n", ++fgc_count);

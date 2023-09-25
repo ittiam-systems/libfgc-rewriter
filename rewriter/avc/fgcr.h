@@ -65,12 +65,7 @@ extern "C" {
 /* Constant Macros                                                           */
 /*****************************************************************************/
 
-
-/* codec type */
-#define AVC 1
-#define HEVC 2
-
-/*SEI FGC relaeted macros*/
+/*SEI FGC related macros*/
 #define SEI_FGC_NUM_COLOUR_COMPONENTS 3
 #define SEI_FGC_MAX_NUM_MODEL_VALUES 6
 #define SEI_FGC_MAX_NUM_INTENSITY_INTERVALS 256
@@ -92,6 +87,13 @@ typedef enum {
     IV_SUCCESS                                  = 0x0,
     IV_FAIL                                     = 0x1,
 }IV_API_CALL_STATUS_T;
+
+/* codec type */
+
+typedef enum {
+    AVC                                         = 1,
+    HEVC                                        = 2,
+}CODEC_T;
 
 
 /*****************************************************************************/
@@ -389,7 +391,7 @@ typedef struct {
     /**
      * codec
      */
-    UWORD8                                       u1_codec;
+    CODEC_T                                      u1_codec;
 
     /**
      * number of film grain characteristics
@@ -519,11 +521,6 @@ typedef struct
     FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
 
     /**
-    * Number of film grain characteristics
-    */
-    UWORD8                                      u1_num_fgc;
-
-    /**
     * Film grain characteristics parameters buffer
     */
     void                                        *ps_fgs_rewrite_prms;
@@ -564,7 +561,7 @@ typedef struct
     /**
     * Film grain characteristics parameters buffer
     */
-    void                                        *ps_fgc_export_prms;
+    fgcr_ctl_set_fgc_params_t                    *ps_fgc_export_prms;
 }fgcr_ctl_fgc_export_ip_t;
 
 typedef struct {
@@ -577,6 +574,11 @@ typedef struct {
      * error code
      */
     UWORD32                                     u4_error_code;
+
+    /**
+    * Exported Film grain characteristics parameters buffer
+    */
+    fgcr_ctl_set_fgc_params_t                    *ps_fgc_export_prms;
 }fgcr_ctl_fgc_export_op_t;
 
 #ifdef __cplusplus

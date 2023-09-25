@@ -701,7 +701,7 @@ IV_API_CALL_STATUS_T fgcr_video_rewrite(iv_obj_t *dec_hdl, void *pv_api_ip, void
 	WORD32 ret = 0;
 	IV_API_CALL_STATUS_T api_ret_value = IV_SUCCESS;
 	WORD32 header_data_left = 0, frame_data_left = 0;
-	UWORD8 u1_codec = ps_dec->u1_codec;
+	CODEC_T u1_codec = ps_dec->u1_codec;
 	UWORD8 *pu1_bitstrm_buf;
 	UWORD8 *pu1_upd_bitstrm_buf;
 	fgcr_video_rewrite_ip_t    *ps_h264_dec_ip;
@@ -900,9 +900,10 @@ IV_API_CALL_STATUS_T fgcr_export(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_ap
     ps_h264_dec_op = (fgcr_ctl_fgc_export_ip_t *)pv_api_op;
 
     sei *ps_sei = ps_dec->ps_sei;
+    ps_h264_dec_op->ps_fgc_export_prms = ps_h264_dec_ip->ps_fgc_export_prms;
 
     fgcr_ctl_set_fgc_params_t *fgc_export_params;
-    fgc_export_params = (fgcr_ctl_set_fgc_params_t *)ps_h264_dec_ip->ps_fgc_export_prms;
+    fgc_export_params = ps_h264_dec_op->ps_fgc_export_prms;
 
     fgc_export_params->u1_film_grain_characteristics_cancel_flag = ps_sei->s_fgc_params.u1_film_grain_characteristics_cancel_flag;
     fgc_export_params->u1_film_grain_model_id = ps_sei->s_fgc_params.u1_film_grain_model_id;
@@ -1018,6 +1019,12 @@ IV_API_CALL_STATUS_T fgcr_set_params(iv_obj_t *dec_hdl, void *pv_api_ip, void *p
 
 	ps_dec->i4_decode_header = 0;
     ps_dec->u1_codec = ps_ctl_ip->u1_codec;
+    if (ps_dec->u1_codec != AVC && ps_dec->u1_codec != HEVC)
+    {
+        ps_ctl_op->u4_error_code |= 1 << FGCR_UNSUPPORTEDPARAM;
+        ps_ctl_op->u4_error_code |= ERROR_UNSUPPORTED_CODEC;
+        ret = IV_FAIL;
+    }
     ps_dec->u1_num_fgc = ps_ctl_ip->u1_num_fgc;
 
 	return ret;
@@ -1365,11 +1372,11 @@ IV_API_CALL_STATUS_T fgcr_set_fgs_rewrite_params(
 	{
 	case FGCR_CMD_CTL_SET_FGS_FOR_REWRITE:
 	{
-        pv_buf = pf_aligned_alloc(pv_mem_ctxt, 128, ps_ip->u1_num_fgc * sizeof(fgcr_set_fgc_params_t));
+        pv_buf = pf_aligned_alloc(pv_mem_ctxt, 128, ps_dec->u1_num_fgc * sizeof(fgcr_set_fgc_params_t));
         RETURN_IF((NULL == pv_buf), IV_FAIL);
         ps_dec->s_fgs_rewrite_prms = (fgcr_set_fgc_params_t*)pv_buf;
-        memcpy(ps_dec->s_fgs_rewrite_prms, (fgcr_set_fgc_params_t*)ps_ip->ps_fgs_rewrite_prms, ps_ip->u1_num_fgc * sizeof(fgcr_set_fgc_params_t));
-		for (int i = 0; i < ps_ip->u1_num_fgc; i++)
+        memcpy(ps_dec->s_fgs_rewrite_prms, (fgcr_set_fgc_params_t*)ps_ip->ps_fgs_rewrite_prms, ps_dec->u1_num_fgc * sizeof(fgcr_set_fgc_params_t));
+		for (int i = 0; i < ps_dec->u1_num_fgc; i++)
 		{
 			i_status = error_check_FGS(ps_dec->s_fgs_rewrite_prms + i);
 		}

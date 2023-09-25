@@ -65,14 +65,14 @@
 WORD32 ih264d_process_nal_unit(dec_bit_stream_t *ps_bitstrm,
                             UWORD8 *pu1_nal_unit,
                             UWORD32 u4_numbytes_in_nal_unit,
-                            UWORD8 u1_codec);
+                            CODEC_T u1_codec);
 void ih264d_rbsp_to_sodb(dec_bit_stream_t *ps_bitstrm);
 WORD32 ih264d_find_start_code(UWORD8 *pu1_buf,
                               UWORD32 u4_cur_pos,
                               UWORD32 u4_max_ofst,
                               UWORD32 *pu4_length_of_start_code,
                               UWORD32 *pu4_next_is_aud,
-                              UWORD8 u1_codec);
+                              CODEC_T u1_codec);
 
 
 #endif /* _FGCR_NAL_H_ */

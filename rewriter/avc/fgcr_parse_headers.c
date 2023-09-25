@@ -187,7 +187,7 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
     UWORD8 **pu1_upd_buf,
     UWORD32 u4_length,
     UWORD32 u4_length_of_start_code,
-    UWORD8 u1_codec)
+    CODEC_T u1_codec)
 {
     dec_bit_stream_t *ps_bitstrm;
     static WORD32 i4_bits_left_in_cw = WORD_SIZE;
@@ -263,7 +263,6 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                         break;
                     }
                 }
-                //else
                 {
                     switch (u1_nal_unit_type)
                     {
@@ -455,7 +454,6 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
                         break;
                     }
                 }
-                //else
                 {
                     switch (u1_nal_unit_type)
                     {

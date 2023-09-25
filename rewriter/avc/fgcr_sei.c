@@ -89,7 +89,7 @@ WORD32 ih264d_parse_fgc_params(dec_bit_stream_t *ps_bitstrm,
     UWORD32 i;
     UWORD32 j;
 
-    UWORD8 u1_codec = ps_dec->u1_codec;
+    CODEC_T u1_codec = ps_dec->u1_codec;
 
     ps_sei->s_fgc_params.u4_fgc_sei_present_flag = 0;
 
@@ -98,7 +98,7 @@ WORD32 ih264d_parse_fgc_params(dec_bit_stream_t *ps_bitstrm,
         return 0;
     }
 
-    // hardcoding to 8 bit. The dependency will be removed.
+    // hardcoding to 8 bit.
     i4_luma_bitdepth = 8;
     i4_chroma_bitdepth = 8;
 
@@ -328,7 +328,7 @@ WORD32 ih264d_parse_sei_payload(dec_bit_stream_t *ps_bitstrm,
                                 dec_struct_t *ps_dec)
 {
     WORD32 i4_status = 0;
-    UWORD8 u1_codec = ps_dec->u1_codec;
+    CODEC_T u1_codec = ps_dec->u1_codec;
 
     switch(ui4_payload_type)
     {
