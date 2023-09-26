@@ -1207,7 +1207,7 @@ int main(WORD32 argc, CHAR *argv[])
         s_ctl_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
         s_ctl_ip.e_sub_cmd = FGCR_CMD_CTL_SETPARAMS;
         s_ctl_ip.u4_size = sizeof(fgcr_ctl_set_config_ip_t);
-        s_ctl_ip.u1_codec = (CODEC_T)s_app_ctx.u1_codec;
+        s_ctl_ip.e_codec = (FGCR_CODEC_T)s_app_ctx.u1_codec;
         s_ctl_ip.u1_num_fgc = s_app_ctx.u1_num_fgc;
 
         s_ctl_op.u4_size = sizeof(fgcr_ctl_set_config_op_t);

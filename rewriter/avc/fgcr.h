@@ -93,7 +93,7 @@ typedef enum {
 typedef enum {
     AVC                                         = 1,
     HEVC                                        = 2,
-}CODEC_T;
+}FGCR_CODEC_T;
 
 
 /*****************************************************************************/
@@ -391,7 +391,7 @@ typedef struct {
     /**
      * codec
      */
-    CODEC_T                                      u1_codec;
+    FGCR_CODEC_T                                 e_codec;
 
     /**
      * number of film grain characteristics
