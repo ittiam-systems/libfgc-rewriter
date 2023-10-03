@@ -60,12 +60,14 @@
 
 #define NAL_REF_IDC(nal_first_byte)       ((nal_first_byte >> 5) & 0x3)
 #define NAL_FORBIDDEN_BIT(nal_first_byte) (nal_first_byte>>7)
-#define NAL_UNIT_TYPE(nal_first_byte)     (nal_first_byte & 0x1F)
+#define NAL_UNIT_TYPE_AVC(nal_first_byte)     (nal_first_byte & 0x1F)
+#define NAL_UNIT_TYPE_HEVC(nal_first_byte)     ((nal_first_byte & 0x7E)>>1)
+#define NUH_TEMPORAL_ID_PLUS1(nal_second_byte)     (nal_second_byte & 0x7)
 
 #define OK        0
 #define NOT_OK    -1
 
-/** NAL Types */
+/** NAL Types - AVC */
 #define SLICE_NAL                       1
 #define SLICE_DATA_PARTITION_A_NAL      2
 #define SLICE_DATA_PARTITION_B_NAL      3
@@ -78,6 +80,19 @@
 #define END_OF_SEQ_RBSP                 10
 #define END_OF_STREAM_RBSP              11
 #define FILLER_DATA_NAL                 12
+
+/** NAL Types - HEVC */
+#define NAL_IDR_W_LP                      19
+#define NAL_IDR_N_LP                      20
+#define NAL_CRA                           21
+#define NAL_VPS                           32
+#define NAL_SPS                           33
+#define NAL_PPS                           34
+#define NAL_AUD                           35
+#define NAL_EOS                           36
+#define NAL_EOB                           37
+#define NAL_FD                            38
+#define NAL_PREFIX_SEI                    39
 
 /** Picture Types */
 #define I_PIC       0

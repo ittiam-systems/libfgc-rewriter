@@ -65,7 +65,7 @@ extern "C" {
 /* Constant Macros                                                           */
 /*****************************************************************************/
 
-/*SEI FGC relaeted macros*/
+/*SEI FGC related macros*/
 #define SEI_FGC_NUM_COLOUR_COMPONENTS 3
 #define SEI_FGC_MAX_NUM_MODEL_VALUES 6
 #define SEI_FGC_MAX_NUM_INTENSITY_INTERVALS 256
@@ -87,6 +87,13 @@ typedef enum {
     IV_SUCCESS                                  = 0x0,
     IV_FAIL                                     = 0x1,
 }IV_API_CALL_STATUS_T;
+
+/* codec type */
+
+typedef enum {
+    AVC                                         = 1,
+    HEVC                                        = 2,
+}FGCR_CODEC_T;
 
 
 /*****************************************************************************/
@@ -154,6 +161,7 @@ typedef enum {
 typedef enum {
     FGCR_CMD_NA                          = 0x7FFFFFFF,
     FGCR_CMD_CTL_SETPARAMS               = 0x1,
+    FGCR_CMD_CTL_EXPORT                  = 0x2,
     FGCR_CMD_CTL_GETVERSION              = 0x6,
     FGCR_CMD_CTL_CODEC_SUBCMD_START      = 0x7
 }FGCR_CONTROL_API_COMMAND_TYPE_T;
@@ -380,6 +388,15 @@ typedef struct {
      */
     FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
 
+    /**
+     * codec
+     */
+    FGCR_CODEC_T                                 e_codec;
+
+    /**
+     * number of film grain characteristics
+     */
+    UWORD8                                       u1_num_fgc;
 }fgcr_ctl_set_config_ip_t;
 
 typedef struct{
@@ -480,17 +497,89 @@ typedef struct
     UWORD8 u1_intensity_interval_upper_bound[MAX_NUM_COMP][MAX_NUM_INTENSITIES];
     /* Component model values for each intensity interval */
     UWORD32 u4_comp_model_value[MAX_NUM_COMP][MAX_NUM_INTENSITIES][MAX_NUM_MODEL_VALUES];
-    /* To be 0:  Persistence of the film grain characteristics */
+    /* Repetition period of the film grain characteristics in AVC codec*/
     UWORD32 u4_film_grain_characteristics_repetition_period;
+    /* To be 0:  Persistence of the film grain characteristics in HEVC codec*/
+    UWORD8 u1_film_grain_characteristics_persistence_flag;
 }fgcr_ctl_set_fgc_params_t;
 
 typedef struct
 {
+    /**
+    * u4_size of the structure
+    */
     UWORD32                                     u4_size;
+
+    /**
+    * cmd
+    */
     FGCR_API_COMMAND_TYPE_T                      e_cmd;
+
+    /**
+    * sub_cmd
+    */
     FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
+
+    /**
+    * Film grain characteristics parameters buffer
+    */
     void                                        *ps_fgs_rewrite_prms;
+
+    /**
+    * Pointer to a function for aligned allocation.
+    */
+    void    *(*pf_aligned_alloc)(void *pv_mem_ctxt, WORD32 alignment, WORD32 size);
+
+    /**
+     * Pointer to memory context that is needed during alloc/free for custom
+     * memory managers. This will be passed as first argument to pf_aligned_alloc and
+     * pf_aligned_free.
+     * If application is using standard memory functions like
+     * malloc/aligned_malloc/memalign/free/aligned_free,
+     * then this is not needed and can be set to NULL
+     */
+    void    *pv_mem_ctxt;
 }fgcr_ctl_fgs_rewrite_params_ip_t;
+
+typedef struct
+{
+    /**
+    * u4_size of the structure
+    */
+    UWORD32                                     u4_size;
+
+    /**
+    * cmd
+    */
+    FGCR_API_COMMAND_TYPE_T                      e_cmd;
+
+    /**
+    * sub_cmd
+    */
+    FGCR_CONTROL_API_COMMAND_TYPE_T              e_sub_cmd;
+
+    /**
+    * Film grain characteristics parameters buffer
+    */
+    fgcr_ctl_set_fgc_params_t                    *ps_fgc_export_prms;
+}fgcr_ctl_fgc_export_ip_t;
+
+typedef struct {
+    /**
+    * u4_size of the structure
+    */
+    UWORD32                                     u4_size;
+
+    /**
+     * error code
+     */
+    UWORD32                                     u4_error_code;
+
+    /**
+    * Exported Film grain characteristics parameters buffer
+    */
+    fgcr_ctl_set_fgc_params_t                    *ps_fgc_export_prms;
+}fgcr_ctl_fgc_export_op_t;
 
 #ifdef __cplusplus
 } /* closing brace for extern "C" */

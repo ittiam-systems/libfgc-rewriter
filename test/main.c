@@ -116,6 +116,8 @@ typedef struct
 	void *cocodec_obj;
 	CHAR ac_ip_fname[STRLENGTH];
 	CHAR ac_op_fgs_fname[STRLENGTH];
+	CHAR ac_fgc_export_fname[STRLENGTH];
+	CHAR ac_fgc_file_fname[STRLENGTH];
 	UWORD32 fps;
 
 	//FGS related parameters
@@ -128,7 +130,11 @@ typedef struct
 	UWORD32 u4_fgs_overide_log2_scale_factor;
 	UWORD32 u4_fgs_overide_dep_comp_model_values;
 
-	fgcr_ctl_set_fgc_params_t s_fgs_prms;
+	fgcr_ctl_set_fgc_params_t *s_fgs_prms;
+	UWORD8 u1_codec;
+	UWORD8 u1_mode;
+	UWORD8 u1_num_fgc;
+	UWORD u1_fgc_count;
 } vid_dec_ctx_t;
 
 typedef enum
@@ -178,6 +184,12 @@ typedef enum
 	INTENSITY_INTERVAL_UPPER_BOUND,
 	COMP_MODEL_VALUE,
 	FILM_GRAIN_CHARACTERISTICS_REPETITION_PERIOD,
+	FILM_GRAIN_CHARACTERISTICS_PERSISTENCE_FLAG,
+	CODEC,
+	MODE,
+    FGC_EXPORT_FILE,
+	NUM_FGC,
+	FGC_FILE,
 } ARGUMENT_T;
 
 typedef struct
@@ -194,6 +206,10 @@ static const argument_t argument_mapping[] =
 		 "Print this help\n"},
 	{ "-c", "--config",      CONFIG,
 		 "config file (Default: test.cfg)\n" },
+	{ "--", "--fgc_file",      FGC_FILE,
+		 "file containing list of film grain characteristics\n" },
+     { "--", "--fgc_export_file",      FGC_EXPORT_FILE,
+         "file in which film grain characteristics from a bitstream are exported\n" },
 
 	{"-v",  "--version",                VERSION,
 		 "Version information\n"},
@@ -238,6 +254,15 @@ static const argument_t argument_mapping[] =
 
 	{"--",       "--comp_model_value",                  COMP_MODEL_VALUE,                "Comma-separated 'j' component model values  for y,u,v for every \"ith\" intensity interval\n"},
 
+	{"--",     "--film_grain_characteristics_repetition_period",           FILM_GRAIN_CHARACTERISTICS_REPETITION_PERIOD,      "repetition period \n"},
+
+	{"--",     "--film_grain_characteristics_persistence_flag",           FILM_GRAIN_CHARACTERISTICS_PERSISTENCE_FLAG,      "persistence flag \n"},
+
+	{"--",       "--codec",                  CODEC,                "AVC or HEVC codec"},
+
+	{"--",       "--mode",                  MODE,                "Rewrite or Export mode"},
+
+	{"--",       "--num_fgc",                  NUM_FGC,                "Number of film grain characteristics"},
 
 };
 
@@ -250,6 +275,12 @@ static const argument_t argument_mapping[] =
 #define DEFAULT_FGS_OVERIDE_FGC_CANCEL_FLAG 1
 #define DEFAULT_FGS_OVERIDE_LOG2_SCALE_FACTOR 1
 #define DEFAULT_FGS_OVERIDE_DEP_COMP_MODEL_VALUES 1
+
+/* modes */
+#define FGC_REWRITER  1
+#define FGC_EXPORT    2
+
+#define DEFAULT_NUM_FGC 1
 
 #define ivd_api_function        fgcr_api_function
 
@@ -445,302 +476,327 @@ ARGUMENT_T get_argument(CHAR *name)
 
 void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 {
-	ARGUMENT_T arg;
-	UWORD8      *pu1_keywd_str;
-	UWORD8      au1_keywd_str[MAX_KEYWORD_LEN];
-	CHAR ac_error_str[ERRLENGTH];
-	pu1_keywd_str = &au1_keywd_str[0];
-	//Updating the parser for new arguments
-	arg = get_argument(argument);
-	switch (arg)
-	{
-	case HELP:
-		print_usage();
-		exit(-1);
-	case VERSION:
-		break;
-	case INPUT_FILE:
-		sscanf(value, "%s", ps_app_ctx->ac_ip_fname);
-		break;
-	case OUTPUT:
-		sscanf(value, "%s", ps_app_ctx->ac_op_fgs_fname);
-		break;
-	case ENABLE_LOGS:
-		sscanf(value, "%hhu", &ps_app_ctx->u1_enable_logs);
-		break;
-	case NUM_FRAMES:
-		sscanf(value, "%d", &ps_app_ctx->u4_max_frm_ts);
-		break;
-	case FGS_ENABLE_REWRITER:
-		sscanf(value, "%d", &ps_app_ctx->u4_fgs_enable_rewriter);
-		break;
-	case FGS_OVERIDE_FGC_CANCEL_FLAG:
-		sscanf(value, "%d", &ps_app_ctx->u4_fgs_overide_fgc_cancel_flag);
-		break;
-	case FGS_OVERIDE_LOG2_SCALE_FACTOR:
-		sscanf(value, "%d", &ps_app_ctx->u4_fgs_overide_log2_scale_factor);
-		break;
-	case FGS_OVERIDE_DEP_COMP_MODEL_VALUES:
-		sscanf(value, "%d", &ps_app_ctx->u4_fgs_overide_dep_comp_model_values);
-		break;
+    ARGUMENT_T arg;
+    UWORD8      *pu1_keywd_str;
+    UWORD8      au1_keywd_str[MAX_KEYWORD_LEN];
+    CHAR ac_error_str[ERRLENGTH];
+    pu1_keywd_str = &au1_keywd_str[0];
+    //Updating the parser for new arguments
+    arg = get_argument(argument);
+    switch (arg)
+    {
+    case HELP:
+        print_usage();
+        exit(-1);
+    case VERSION:
+        break;
+    case INPUT_FILE:
+        sscanf(value, "%s", ps_app_ctx->ac_ip_fname);
+        break;
+    case OUTPUT:
+        sscanf(value, "%s", ps_app_ctx->ac_op_fgs_fname);
+        break;
+    case ENABLE_LOGS:
+        sscanf(value, "%hhu", &ps_app_ctx->u1_enable_logs);
+        break;
+    case NUM_FRAMES:
+        sscanf(value, "%d", &ps_app_ctx->u4_max_frm_ts);
+        break;
+    case FGS_ENABLE_REWRITER:
+        sscanf(value, "%d", &ps_app_ctx->u4_fgs_enable_rewriter);
+        break;
+    case FGS_OVERIDE_FGC_CANCEL_FLAG:
+        sscanf(value, "%d", &ps_app_ctx->u4_fgs_overide_fgc_cancel_flag);
+        break;
+    case FGS_OVERIDE_LOG2_SCALE_FACTOR:
+        sscanf(value, "%d", &ps_app_ctx->u4_fgs_overide_log2_scale_factor);
+        break;
+    case FGS_OVERIDE_DEP_COMP_MODEL_VALUES:
+        sscanf(value, "%d", &ps_app_ctx->u4_fgs_overide_dep_comp_model_values);
+        break;
 
-	case FILM_GRAIN_CHARACTERISTICS_CANCEL_FLAG:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_characteristics_cancel_flag);
-		break;
+    case FILM_GRAIN_CHARACTERISTICS_CANCEL_FLAG:
+        sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_characteristics_cancel_flag);
+        break;
 
-	case FILM_GRAIN_MODEL_ID:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_model_id);
-		break;
+    case FILM_GRAIN_MODEL_ID:
+        sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_model_id);
+        break;
 
-	case SEPARATE_COLOUR_DESCRIPTION_PRESENT_FLAG:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_separate_colour_description_present_flag);
-		break;
+    case SEPARATE_COLOUR_DESCRIPTION_PRESENT_FLAG:
+        sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_separate_colour_description_present_flag);
+        break;
 
-	case FILM_GRAIN_BIT_DEPTH_LUMA_MINUS8:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_bit_depth_luma_minus8);
-		break;
+    case FILM_GRAIN_BIT_DEPTH_LUMA_MINUS8:
+        sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_bit_depth_luma_minus8);
+        break;
 
-	case FILM_GRAIN_BIT_DEPTH_CHROMA_MINUS8:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_bit_depth_chroma_minus8);
-		break;
+    case FILM_GRAIN_BIT_DEPTH_CHROMA_MINUS8:
+        sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_bit_depth_chroma_minus8);
+        break;
 
-	case FILM_GRAIN_FULL_RANGE_FLAG:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_full_range_flag);
-		break;
+    case FILM_GRAIN_FULL_RANGE_FLAG:
+        sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_full_range_flag);
+        break;
 
-	case FILM_GRAIN_COLOUR_PRIMARIES:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_colour_primaries);
-		break;
+    case FILM_GRAIN_COLOUR_PRIMARIES:
+        sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_colour_primaries);
+        break;
 
-	case FILM_GRAIN_TRANSFER_CHARACTERISTICS:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_transfer_characteristics);
-		break;
+    case FILM_GRAIN_TRANSFER_CHARACTERISTICS:
+        sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_transfer_characteristics);
+        break;
 
-	case FILM_GRAIN_MATRIX_COEFFICIENTS:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_film_grain_matrix_coefficients);
-		break;
+    case FILM_GRAIN_MATRIX_COEFFICIENTS:
+        sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_matrix_coefficients);
+        break;
 
-	case BLENDING_MODE_ID:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_blending_mode_id);
-		break;
+    case BLENDING_MODE_ID:
+        sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_blending_mode_id);
+        break;
 
-	case LOG2_SCALE_FACTOR:
-		sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms.u1_log2_scale_factor);
-		break;
+    case LOG2_SCALE_FACTOR:
+        sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_log2_scale_factor);
+        break;
 
-	case COMP_MODEL_PRESENT_FLAG:
-	{
-		char *token;
-		char *str;
-		const char s[2] = ",";
-		WORD32 i = 0;
-		sscanf(value, "%s", pu1_keywd_str);
-		str = (char *)pu1_keywd_str;
-		token = strtok(str, s);
-		while (token != NULL)
-		{
-			if (i < MAX_NUM_COMP)
-			{
-				sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[i]);
-				i++;
-				token = strtok(NULL, s);
-			}
-		}
-		if (i < MAX_NUM_COMP)
-		{
-			sprintf(ac_error_str, "Invalid number of values [%d] being passed to parameter: [%s]\n",
-				i, argument);
-			codec_exit(ac_error_str);
-		}
-	}
-	break;
+    case COMP_MODEL_PRESENT_FLAG:
+    {
+        char *token;
+        char *str;
+        const char s[2] = ",";
+        WORD32 i = 0;
+        sscanf(value, "%s", pu1_keywd_str);
+        str = (char *)pu1_keywd_str;
+        token = strtok(str, s);
+        while (token != NULL)
+        {
+            if (i < MAX_NUM_COMP)
+            {
+                sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_comp_model_present_flag[i]);
+                i++;
+                token = strtok(NULL, s);
+            }
+        }
+        if (i < MAX_NUM_COMP)
+        {
+            sprintf(ac_error_str, "Invalid number of values [%d] being passed to parameter: [%s]\n",
+                i, argument);
+            codec_exit(ac_error_str);
+        }
+    }
+    break;
 
-	case NUM_INTENSITY_INTERVALS_MINUS1:
-	{
-		char *token;
-		char *str;
-		const char s[2] = ",";
-		WORD32 i = 0;
-		sscanf(value, "%s", pu1_keywd_str);
-		str = (char *)pu1_keywd_str;
-		token = strtok(str, s);
-		while (token != NULL)
-		{
-			if (i < MAX_NUM_COMP)
-			{
-				sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms.u1_num_intensity_intervals_minus1[i]);
-				i++;
-				token = strtok(NULL, s);
-			}
-		}
-		if (i < MAX_NUM_COMP)
-		{
-			sprintf(ac_error_str, "Invalid number of values [%d] being passed to parameter: [%s]\n",
-				i, argument);
-			codec_exit(ac_error_str);
-		}
-	}
-	break;
+    case NUM_INTENSITY_INTERVALS_MINUS1:
+    {
+        char *token;
+        char *str;
+        const char s[2] = ",";
+        WORD32 i = 0;
+        sscanf(value, "%s", pu1_keywd_str);
+        str = (char *)pu1_keywd_str;
+        token = strtok(str, s);
+        while (token != NULL)
+        {
+            if (i < MAX_NUM_COMP)
+            {
+                sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_intensity_intervals_minus1[i]);
+                i++;
+                token = strtok(NULL, s);
+            }
+        }
+        if (i < MAX_NUM_COMP)
+        {
+            sprintf(ac_error_str, "Invalid number of values [%d] being passed to parameter: [%s]\n",
+                i, argument);
+            codec_exit(ac_error_str);
+        }
+    }
+    break;
 
-	case NUM_MODEL_VALUES_MINUS1:
-	{
-		char *token;
-		char *str;
-		const char s[2] = ",";
-		WORD32 i = 0;
-		sscanf(value, "%s", pu1_keywd_str);
-		str = (char *)pu1_keywd_str;
-		token = strtok(str, s);
-		while (token != NULL)
-		{
-			if (i < MAX_NUM_COMP)
-			{
-				sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms.u1_num_model_values_minus1[i]);
-				i++;
-				token = strtok(NULL, s);
-			}
-		}
-		if (i < MAX_NUM_COMP)
-		{
-			sprintf(ac_error_str, "\nInvalid number of values [%d] being passed to parameter: [%s]\n",
-				i, argument);
-			codec_exit(ac_error_str);
-		}
-	}
-	break;
+    case NUM_MODEL_VALUES_MINUS1:
+    {
+        char *token;
+        char *str;
+        const char s[2] = ",";
+        WORD32 i = 0;
+        sscanf(value, "%s", pu1_keywd_str);
+        str = (char *)pu1_keywd_str;
+        token = strtok(str, s);
+        while (token != NULL)
+        {
+            if (i < MAX_NUM_COMP)
+            {
+                sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_model_values_minus1[i]);
+                i++;
+                token = strtok(NULL, s);
+            }
+        }
+        if (i < MAX_NUM_COMP)
+        {
+            sprintf(ac_error_str, "\nInvalid number of values [%d] being passed to parameter: [%s]\n",
+                i, argument);
+            codec_exit(ac_error_str);
+        }
+    }
+    break;
 
-	case INTENSITY_INTERVAL_LOWER_BOUND:
-	{
-		WORD32 max_num_of_values = 0;
-		WORD32 num_intensity_itvls = 0;
-		char *token;
-		char *str;
-		const char s[2] = ",";
-		WORD32 i, j, k;
-		sscanf(value, "%s", pu1_keywd_str);
-		str = (char *)pu1_keywd_str;
-		token = strtok(str, s);
+    case INTENSITY_INTERVAL_LOWER_BOUND:
+    {
+        WORD32 max_num_of_values = 0;
+        WORD32 num_intensity_itvls = 0;
+        char *token;
+        char *str;
+        const char s[2] = ",";
+        WORD32 i, j, k;
+        sscanf(value, "%s", pu1_keywd_str);
+        str = (char *)pu1_keywd_str;
+        token = strtok(str, s);
 
-		for (i = 0; i < MAX_NUM_COMP; i++)
-		{
-			max_num_of_values += (ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[i] * (ps_app_ctx->s_fgs_prms.u1_num_intensity_intervals_minus1[i] + 1));
-		}
+        for (i = 0; i < MAX_NUM_COMP; i++)
+        {
+            max_num_of_values += (ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_comp_model_present_flag[i] * (ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_intensity_intervals_minus1[i] + 1));
+        }
 
-		i = 0;
-		for (j = 0; j < MAX_NUM_COMP; j++)
-		{
-			num_intensity_itvls = (1 + ps_app_ctx->s_fgs_prms.u1_num_intensity_intervals_minus1[j])*ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[j];
-			for (k = 0; k < (num_intensity_itvls); k++)
-			{
-				if (token == NULL)
-				{
-					sprintf(ac_error_str, "Invalid number of values [%d] being passed to parameter: [%s]\n",
-						i, argument);
-					codec_exit(ac_error_str);
-				}
-				else
-				{
-					sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms.u1_intensity_interval_lower_bound[j][k]);
-					token = strtok(NULL, s);
-					i++;
-				}
-			}
-		}
-	}
-	break;
+        i = 0;
+        for (j = 0; j < MAX_NUM_COMP; j++)
+        {
+            num_intensity_itvls = (1 + ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_intensity_intervals_minus1[j])*ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_comp_model_present_flag[j];
+            for (k = 0; k < (num_intensity_itvls); k++)
+            {
+                if (token == NULL)
+                {
+                    sprintf(ac_error_str, "Invalid number of values [%d] being passed to parameter: [%s]\n",
+                        i, argument);
+                    codec_exit(ac_error_str);
+                }
+                else
+                {
+                    sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_intensity_interval_lower_bound[j][k]);
+                    token = strtok(NULL, s);
+                    i++;
+                }
+            }
+        }
+    }
+    break;
 
-	case INTENSITY_INTERVAL_UPPER_BOUND:
-	{
-		WORD32 max_num_of_values = 0;
-		WORD32 num_intensity_itvls = 0;
-		char *token;
-		char *str;
-		const char s[2] = ",";
-		WORD32 i, j, k;
-		i = 0;
-		sscanf(value, "%s", pu1_keywd_str);
-		str = (char *)pu1_keywd_str;
-		token = strtok(str, s);
-		for (j = 0; j < MAX_NUM_COMP; j++)
-		{
-			num_intensity_itvls = (1 + ps_app_ctx->s_fgs_prms.u1_num_intensity_intervals_minus1[j])*ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[j];
-			for (k = 0; k < num_intensity_itvls; k++)
-			{
-				if (token == NULL)
-				{
-					sprintf(ac_error_str, "Invalid number of values [%d] being passed to parameter: [%s]\n",
-						i, argument);
-					codec_exit(ac_error_str);
-				}
-				else
-				{
-					sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms.u1_intensity_interval_upper_bound[j][k]);
-					token = strtok(NULL, s);
-					i++;
-				}
-			}
-		}
-	}
-	break;
+    case INTENSITY_INTERVAL_UPPER_BOUND:
+    {
+        WORD32 max_num_of_values = 0;
+        WORD32 num_intensity_itvls = 0;
+        char *token;
+        char *str;
+        const char s[2] = ",";
+        WORD32 i, j, k;
+        i = 0;
+        sscanf(value, "%s", pu1_keywd_str);
+        str = (char *)pu1_keywd_str;
+        token = strtok(str, s);
+        for (j = 0; j < MAX_NUM_COMP; j++)
+        {
+            num_intensity_itvls = (1 + ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_intensity_intervals_minus1[j])*ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_comp_model_present_flag[j];
+            for (k = 0; k < num_intensity_itvls; k++)
+            {
+                if (token == NULL)
+                {
+                    sprintf(ac_error_str, "Invalid number of values [%d] being passed to parameter: [%s]\n",
+                        i, argument);
+                    codec_exit(ac_error_str);
+                }
+                else
+                {
+                    sscanf(token, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_intensity_interval_upper_bound[j][k]);
+                    token = strtok(NULL, s);
+                    i++;
+                }
+            }
+        }
+    }
+    break;
 
-	case COMP_MODEL_VALUE:
-	{
-		WORD32 max_num_of_values = 0;
-		WORD32 num_intensity_itvls = 0;
-		WORD32 num_comp_model_values = 0;
-		WORD32 c = 0;
-		WORD32 i, j, k, v;
-		char *token;
-		char *str;
-		const char s[2] = ",";
-		sscanf(value, "%s", pu1_keywd_str);
-		str = (char *)pu1_keywd_str;
-		token = strtok(str, s);
+    case COMP_MODEL_VALUE:
+    {
+        WORD32 max_num_of_values = 0;
+        WORD32 num_intensity_itvls = 0;
+        WORD32 num_comp_model_values = 0;
+        WORD32 c = 0;
+        WORD32 i, j, k, v;
+        char *token;
+        char *str;
+        const char s[2] = ",";
+        sscanf(value, "%s", pu1_keywd_str);
+        str = (char *)pu1_keywd_str;
+        token = strtok(str, s);
 
-		for (i = 0; i < MAX_NUM_COMP; i++)
-		{
-			max_num_of_values += (ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[i] * (ps_app_ctx->s_fgs_prms.u1_num_intensity_intervals_minus1[i] + 1));
-		}
-		i = 0; j = 0;
+        for (i = 0; i < MAX_NUM_COMP; i++)
+        {
+            max_num_of_values += (ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_comp_model_present_flag[i] * (ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_intensity_intervals_minus1[i] + 1));
+        }
+        i = 0; j = 0;
 
-		if (i < max_num_of_values)
-		{
-			for (j = 0; j < MAX_NUM_COMP; j++)
-			{
-				num_intensity_itvls = (1 + ps_app_ctx->s_fgs_prms.u1_num_intensity_intervals_minus1[j])* ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[j];
-				for (k = 0; k < (num_intensity_itvls); k++)
-				{
-					num_comp_model_values = (1 + ps_app_ctx->s_fgs_prms.u1_num_model_values_minus1[j]) *
-						ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[j];
-					for (v = 0; v < (num_comp_model_values); v++)
-					{
-						if (token == NULL)
-						{
-							sprintf(ac_error_str, "Invalid number of values [%d] being passed to parameter: [%s]\n",
-								i, argument);
-							codec_exit(ac_error_str);
-						}
-						else
-						{
-							sscanf(token, "%d", &ps_app_ctx->s_fgs_prms.u4_comp_model_value[j][k][v]);
-							token = strtok(NULL, s);
-							i++;
-						}
-					}
-				}
-			}
-		}
-	}
-	break;
+        if (i < max_num_of_values)
+        {
+            for (j = 0; j < MAX_NUM_COMP; j++)
+            {
+                num_intensity_itvls = (1 + ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_intensity_intervals_minus1[j])* ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_comp_model_present_flag[j];
+                for (k = 0; k < (num_intensity_itvls); k++)
+                {
+                    num_comp_model_values = (1 + ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_num_model_values_minus1[j]) *
+                        ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_comp_model_present_flag[j];
+                    for (v = 0; v < (num_comp_model_values); v++)
+                    {
+                        if (token == NULL)
+                        {
+                            sprintf(ac_error_str, "Invalid number of values [%d] being passed to parameter: [%s]\n",
+                                i, argument);
+                            codec_exit(ac_error_str);
+                        }
+                        else
+                        {
+                            sscanf(token, "%d", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u4_comp_model_value[j][k][v]);
+                            token = strtok(NULL, s);
+                            i++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    break;
 
-	case FILM_GRAIN_CHARACTERISTICS_REPETITION_PERIOD:
-		sscanf(value, "%d", &ps_app_ctx->s_fgs_prms.u4_film_grain_characteristics_repetition_period);
-		break;
-	case INVALID:
-	default:
-		printf("Ignoring argument :  %s\n", argument);
-		break;
-	}
+    case FILM_GRAIN_CHARACTERISTICS_REPETITION_PERIOD:
+        sscanf(value, "%d", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u4_film_grain_characteristics_repetition_period);
+        break;
+
+    case FILM_GRAIN_CHARACTERISTICS_PERSISTENCE_FLAG:
+        sscanf(value, "%hhu", &ps_app_ctx->s_fgs_prms[ps_app_ctx->u1_fgc_count].u1_film_grain_characteristics_persistence_flag);
+        break;
+
+    case CODEC:
+        sscanf(value, "%hhu", &ps_app_ctx->u1_codec);
+        break;
+
+    case MODE:
+        sscanf(value, "%hhu", &ps_app_ctx->u1_mode);
+        break;
+
+    case NUM_FGC:
+        sscanf(value, "%hhu", &ps_app_ctx->u1_num_fgc);
+        break;
+
+    case FGC_FILE:
+        sscanf(value, "%s", ps_app_ctx->ac_fgc_file_fname);
+        break;
+
+    case FGC_EXPORT_FILE:
+        sscanf(value, "%s", ps_app_ctx->ac_fgc_export_fname);
+        break;
+
+    case INVALID:
+    default:
+        printf("Ignoring argument :  %s\n", argument);
+        break;
+    }
 }
 
 /*****************************************************************************/
@@ -762,75 +818,109 @@ void parse_argument(vid_dec_ctx_t *ps_app_ctx, CHAR *argument, CHAR *value)
 
 void read_cfg_file(vid_dec_ctx_t *ps_app_ctx, FILE *fp_cfg_file)
 {
-	CHAR line[STRLENGTH];
-	CHAR description[STRLENGTH];
-	CHAR value[STRLENGTH];
-	CHAR argument[STRLENGTH];
-	void *ret;
-	while (0 == feof(fp_cfg_file))
-	{
-		line[0] = '\0';
-		ret = fgets(line, STRLENGTH, fp_cfg_file);
-		if (NULL == ret)
-			break;
-		argument[0] = '\0';
-		/* Reading Input File Name */
-		sscanf(line, "%s %s %s", argument, value, description);
-		if (argument[0] == '\0')
-			continue;
+    CHAR line[STRLENGTH];
+    CHAR description[STRLENGTH];
+    CHAR value[STRLENGTH];
+    CHAR argument[STRLENGTH];
+    void *ret;
+    while (0 == feof(fp_cfg_file))
+    {
+        line[0] = '\0';
+        ret = fgets(line, STRLENGTH, fp_cfg_file);
+        if (NULL == ret)
+            break;
+        argument[0] = '\0';
+        /* Reading Input File Name */
+        sscanf(line, "%s %s %s", argument, value, description);
+        if (argument[0] == '\0')
+            continue;
 
-		parse_argument(ps_app_ctx, argument, value);
-	}
+        parse_argument(ps_app_ctx, argument, value);
+    }
+}
+
+void read_fgc_file(vid_dec_ctx_t *ps_app_ctx, FILE *fp_cfg_file)
+{
+    CHAR line[STRLENGTH];
+    CHAR description[STRLENGTH];
+    CHAR value[STRLENGTH];
+    CHAR argument[STRLENGTH];
+    void *ret;
+    while (0 == feof(fp_cfg_file))
+    {
+        line[0] = '\0';
+        ret = fgets(line, STRLENGTH, fp_cfg_file);
+        if (NULL == ret)
+            break;
+        argument[0] = '\0';
+        /* Reading Input File Name */
+        sscanf(line, "%s %s %s", argument, value, description);
+        if (argument[0] == '\0')
+            continue;
+        else if ((0 == strcmp(argument, "FGC")) && (0 != strcmp(value, "1")))
+        {
+            ps_app_ctx->u1_fgc_count++;
+            continue;
+        }
+
+        parse_argument(ps_app_ctx, argument, value);
+    }
 }
 
 #ifdef X86_MINGW
 void sigsegv_handler()
 {
-	printf("Segmentation fault, Exiting.. \n");
-	exit(-1);
+    printf("Segmentation fault, Exiting.. \n");
+    exit(-1);
 }
 #endif
 
 UWORD32 default_fgs_rewriter_params(vid_dec_ctx_t *ps_app_ctx)
 {
-	ps_app_ctx->u4_fgs_enable_rewriter = DEFAULT_FGS_ENABLE_REWRITER;
-	ps_app_ctx->u4_fgs_overide_fgc_cancel_flag = DEFAULT_FGS_OVERIDE_FGC_CANCEL_FLAG;
-	ps_app_ctx->u4_fgs_overide_log2_scale_factor = DEFAULT_FGS_OVERIDE_LOG2_SCALE_FACTOR;
-	ps_app_ctx->u4_fgs_overide_dep_comp_model_values = DEFAULT_FGS_OVERIDE_DEP_COMP_MODEL_VALUES;
+    ps_app_ctx->u4_fgs_enable_rewriter = DEFAULT_FGS_ENABLE_REWRITER;
+    ps_app_ctx->u4_fgs_overide_fgc_cancel_flag = DEFAULT_FGS_OVERIDE_FGC_CANCEL_FLAG;
+    ps_app_ctx->u4_fgs_overide_log2_scale_factor = DEFAULT_FGS_OVERIDE_LOG2_SCALE_FACTOR;
+    ps_app_ctx->u4_fgs_overide_dep_comp_model_values = DEFAULT_FGS_OVERIDE_DEP_COMP_MODEL_VALUES;
 
-	/** Default FGS values if not given by the config file */
-	/* FGS parameters */
-	ps_app_ctx->s_fgs_prms.u1_film_grain_characteristics_cancel_flag = 1;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_model_id = 0;
-	ps_app_ctx->s_fgs_prms.u1_separate_colour_description_present_flag = 0;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_bit_depth_luma_minus8 = 0;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_bit_depth_chroma_minus8 = 0;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_full_range_flag = 0;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_colour_primaries = 0;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_transfer_characteristics = 0;
-	ps_app_ctx->s_fgs_prms.u1_film_grain_matrix_coefficients = 0;
-	ps_app_ctx->s_fgs_prms.u1_blending_mode_id = 0;
-	ps_app_ctx->s_fgs_prms.u1_log2_scale_factor = 2;
-	for (int c = 0; c < MAX_NUM_COMP; c++)
-	{
-		ps_app_ctx->s_fgs_prms.u1_comp_model_present_flag[c] = 0;
-	}
+    /** Default FGS values if not given by the config file */
+    /* FGS parameters */
 
-	for (int c = 0; c < MAX_NUM_COMP; c++)
-	{
-		ps_app_ctx->s_fgs_prms.u1_num_intensity_intervals_minus1[c] = 0;
-		ps_app_ctx->s_fgs_prms.u1_num_model_values_minus1[c] = 0;
-		for (int i = 0; i <= MAX_NUM_INTENSITIES; i++)
-		{
-			ps_app_ctx->s_fgs_prms.u1_intensity_interval_lower_bound[c][i] = 0;
-			ps_app_ctx->s_fgs_prms.u1_intensity_interval_upper_bound[c][i] = 0;
-			for (int j = 0; j <= MAX_NUM_MODEL_VALUES; j++)
-			{
-				ps_app_ctx->s_fgs_prms.u4_comp_model_value[c][i][j] = 0;
-			}
-		}
-	}
-	return 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_characteristics_cancel_flag = 1;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_model_id = 0;
+    ps_app_ctx->s_fgs_prms->u1_separate_colour_description_present_flag = 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_bit_depth_luma_minus8 = 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_bit_depth_chroma_minus8 = 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_full_range_flag = 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_colour_primaries = 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_transfer_characteristics = 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_matrix_coefficients = 0;
+    ps_app_ctx->s_fgs_prms->u1_blending_mode_id = 0;
+    ps_app_ctx->s_fgs_prms->u1_log2_scale_factor = 2;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_characteristics_persistence_flag = 0;
+    for (int c = 0; c < MAX_NUM_COMP; c++)
+    {
+        ps_app_ctx->s_fgs_prms->u1_comp_model_present_flag[c] = 0;
+    }
+
+    for (int c = 0; c < MAX_NUM_COMP; c++)
+    {
+        ps_app_ctx->s_fgs_prms->u1_num_intensity_intervals_minus1[c] = 0;
+        ps_app_ctx->s_fgs_prms->u1_num_model_values_minus1[c] = 0;
+        for (int i = 0; i <= MAX_NUM_INTENSITIES; i++)
+        {
+            ps_app_ctx->s_fgs_prms->u1_intensity_interval_lower_bound[c][i] = 0;
+            ps_app_ctx->s_fgs_prms->u1_intensity_interval_upper_bound[c][i] = 0;
+            for (int j = 0; j <= MAX_NUM_MODEL_VALUES; j++)
+            {
+                ps_app_ctx->s_fgs_prms->u4_comp_model_value[c][i][j] = 0;
+            }
+        }
+    }
+
+    ps_app_ctx->s_fgs_prms->u4_film_grain_characteristics_repetition_period = 0;
+    ps_app_ctx->s_fgs_prms->u1_film_grain_characteristics_persistence_flag = 0;
+
+    return 0;
 }
 //int gettimeofday(struct timeval * tp, struct timezone * tzp)
 //{
@@ -871,9 +961,12 @@ UWORD32 default_fgs_rewriter_params(vid_dec_ctx_t *ps_app_ctx)
 int main(WORD32 argc, CHAR *argv[])
 {
 	CHAR ac_cfg_fname[STRLENGTH];
+	CHAR ac_fgc_fname[STRLENGTH];
 	FILE *fp_cfg_file = NULL;
+	FILE *fp_fgc_file = NULL;
 	FILE *ps_ip_file = NULL;
 	FILE *ps_fgs_upd_file = NULL;
+	FILE *ps_fgc_export_file = NULL;
 	WORD32 ret;
 	CHAR ac_error_str[ERRLENGTH];
 	vid_dec_ctx_t s_app_ctx;
@@ -891,6 +984,7 @@ int main(WORD32 argc, CHAR *argv[])
 	WORD32 total_bytes_comsumed;
 	WORD32 total_bytes_generated;
 	UWORD32 max_op_frm_ts;
+    fgcr_ctl_set_fgc_params_t *ps_fgs_prms = NULL;
 
 #ifdef PROFILE_ENABLE
 	UWORD32 u4_tot_cycles = 0;
@@ -934,6 +1028,7 @@ int main(WORD32 argc, CHAR *argv[])
 	/***********************************************************************/
 
 	strcpy(s_app_ctx.ac_ip_fname, "\0");
+    strcpy(s_app_ctx.ac_fgc_export_fname, "\0");
 	s_app_ctx.fps = DEFAULT_FPS;
 	file_pos = 0;
 	total_bytes_comsumed = 0;
@@ -947,7 +1042,12 @@ int main(WORD32 argc, CHAR *argv[])
 	s_app_ctx.u4_fgs_blk_size = DEFAULT_FGS_BLK_SIZE;
 	s_app_ctx.u4_fgs_transform_type = DEFAULT_FGS_TRANSFORM_TYPE;
 	s_app_ctx.u4_fgs_disable_chroma = DEFAULT_FGS_DISABLE_CHROMA;
+	s_app_ctx.u1_mode = FGC_REWRITER;
+	s_app_ctx.u1_num_fgc = DEFAULT_NUM_FGC;
+	s_app_ctx.u1_fgc_count = 0;
 
+    fgcr_ctl_set_fgc_params_t s_fgs_params;
+    s_app_ctx.s_fgs_prms = &s_fgs_params;
 	default_fgs_rewriter_params(&s_app_ctx);
 
 	s_app_ctx.u1_enable_logs = 0;
@@ -990,6 +1090,23 @@ int main(WORD32 argc, CHAR *argv[])
 		fclose(fp_cfg_file);
 	}
 
+    if (s_app_ctx.u1_num_fgc > 1)
+    {
+        fgcr_ctl_set_fgc_params_t *s_fgs_params;
+        s_fgs_params = (fgcr_ctl_set_fgc_params_t *)malloc(s_app_ctx.u1_num_fgc * sizeof(fgcr_ctl_set_fgc_params_t));
+        s_app_ctx.s_fgs_prms = s_fgs_params;
+
+        strcpy(ac_fgc_fname, s_app_ctx.ac_fgc_file_fname);
+        if ((fp_fgc_file = fopen(ac_fgc_fname, "r")) == NULL)
+        {
+            sprintf(ac_error_str, "Could not open Film Grain Characteristics file %s",
+                ac_fgc_fname);
+            codec_exit(ac_error_str);
+        }
+        read_fgc_file(&s_app_ctx, fp_fgc_file);
+        fclose(fp_fgc_file);
+    }
+
 	if (s_app_ctx.u1_enable_logs != 0 && s_app_ctx.u1_enable_logs != 1)
 	{
 		printf("Error in setting parameter enable_logs\n");
@@ -1006,11 +1123,19 @@ int main(WORD32 argc, CHAR *argv[])
 		exit(-1);
 	}
 
+    if (strcmp(s_app_ctx.ac_fgc_export_fname, "\0") == 0)
+    {
+        printf("Using fgc_export.txt as export file \n");
+        strcpy(s_app_ctx.ac_fgc_export_fname, "fgc_export.txt");
+    }
+
 	/***********************************************************************/
 	/*          create the file object for input file                      */
 	/***********************************************************************/
 	ps_ip_file = fopen(s_app_ctx.ac_ip_fname, "rb");
 	ps_fgs_upd_file = fopen(s_app_ctx.ac_op_fgs_fname, "wb");
+
+	ps_fgc_export_file = fopen(s_app_ctx.ac_fgc_export_fname, "wb");
 
 	if (NULL == ps_ip_file)
 	{
@@ -1071,6 +1196,33 @@ int main(WORD32 argc, CHAR *argv[])
 			s_app_ctx.cocodec_obj = codec_obj;
 		}
 	}
+
+	/*************************************************************************/
+	/* set Codec and number of film grain characteristics                                                  */
+	/*************************************************************************/
+    {
+        fgcr_ctl_set_config_ip_t s_ctl_ip;
+        fgcr_ctl_set_config_op_t s_ctl_op;
+
+        s_ctl_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
+        s_ctl_ip.e_sub_cmd = FGCR_CMD_CTL_SETPARAMS;
+        s_ctl_ip.u4_size = sizeof(fgcr_ctl_set_config_ip_t);
+        s_ctl_ip.e_codec = (FGCR_CODEC_T)s_app_ctx.u1_codec;
+        s_ctl_ip.u1_num_fgc = s_app_ctx.u1_num_fgc;
+
+        s_ctl_op.u4_size = sizeof(fgcr_ctl_set_config_op_t);
+
+        ret = ivd_api_function((iv_obj_t *)codec_obj, (void *)&s_ctl_ip, (void *)&s_ctl_op);
+
+        if (IV_SUCCESS != ret)
+        {
+            sprintf(ac_error_str, "Error in Set Parameters");
+            codec_exit(ac_error_str);
+        }
+    }
+
+	if (s_app_ctx.u1_mode == FGC_EXPORT)
+		s_app_ctx.u4_fgs_enable_rewriter = 0;
 
 	/*************************************************************************/
 	/* set FGS parameters                                                    */
@@ -1134,12 +1286,15 @@ int main(WORD32 argc, CHAR *argv[])
 
 			fgcr_ctl_fgs_rewrite_params_ip_t s_ctl_fgs_rewrite_ip;
 			fgcr_ctl_set_fgs_params_op_t     s_ctl_fgs_rewrite_op;
-			fgcr_ctl_set_fgc_params_t *ps_fgs_prms;
+            ps_fgs_prms = (fgcr_ctl_set_fgc_params_t *)malloc(s_app_ctx.u1_num_fgc * sizeof(fgcr_ctl_set_fgc_params_t));
 
 			s_ctl_fgs_rewrite_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
 			s_ctl_fgs_rewrite_ip.e_sub_cmd = (FGCR_CONTROL_API_COMMAND_TYPE_T)FGCR_CMD_CTL_SET_FGS_FOR_REWRITE;
-			ps_fgs_prms = &s_app_ctx.s_fgs_prms;
-			s_ctl_fgs_rewrite_ip.ps_fgs_rewrite_prms = (void *)ps_fgs_prms;
+            s_ctl_fgs_rewrite_ip.pf_aligned_alloc = fgcr_aligned_malloc;
+            s_ctl_fgs_rewrite_ip.pv_mem_ctxt = NULL;
+			
+            memcpy(ps_fgs_prms, s_app_ctx.s_fgs_prms, s_app_ctx.u1_num_fgc * sizeof(fgcr_ctl_set_fgc_params_t));
+            s_ctl_fgs_rewrite_ip.ps_fgs_rewrite_prms = (void *)ps_fgs_prms;
 			ret = ivd_api_function((iv_obj_t*)codec_obj, (void *)&s_ctl_fgs_rewrite_ip,
 				(void *)&s_ctl_fgs_rewrite_op);
 			if (ret != IV_SUCCESS)
@@ -1154,24 +1309,7 @@ int main(WORD32 argc, CHAR *argv[])
 	/* Set the decoder in frame decode mode. It was set in header decode     */
 	/* mode earlier                                                          */
 	/*************************************************************************/
-	{
-		fgcr_ctl_set_config_ip_t s_ctl_ip;
-		fgcr_ctl_set_config_op_t s_ctl_op;
 
-		s_ctl_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
-		s_ctl_ip.e_sub_cmd = FGCR_CMD_CTL_SETPARAMS;
-		s_ctl_ip.u4_size = sizeof(fgcr_ctl_set_config_ip_t);
-
-		s_ctl_op.u4_size = sizeof(fgcr_ctl_set_config_op_t);
-
-		ret = ivd_api_function((iv_obj_t *)codec_obj, (void *)&s_ctl_ip, (void *)&s_ctl_op);
-
-		if (IV_SUCCESS != ret)
-		{
-			sprintf(ac_error_str, "Error in Set Parameters");
-			//codec_exit(ac_error_str);
-		}
-	}
 
 #ifdef WINDOWS_TIMER
 	QueryPerformanceFrequency(&frequency);
@@ -1227,22 +1365,103 @@ int main(WORD32 argc, CHAR *argv[])
 			TIMER s_end_timer;
 #endif
 
+				s_video_decode_ip.e_cmd = FGCR_CMD_VIDEO_REWRITE;
+				s_video_decode_ip.pv_stream_buffer = pu1_bs_buf;
+				s_video_decode_ip.pv_stream_out_buffer = pu1_bsu_buf;
+				s_video_decode_ip.u4_num_Bytes = u4_bytes_remaining;
+				s_video_decode_ip.u4_size = sizeof(fgcr_video_rewrite_ip_t);
 
-			s_video_decode_ip.e_cmd = FGCR_CMD_VIDEO_REWRITE;
-			s_video_decode_ip.pv_stream_buffer = pu1_bs_buf;
-			s_video_decode_ip.pv_stream_out_buffer = pu1_bsu_buf;
-			s_video_decode_ip.u4_num_Bytes = u4_bytes_remaining;
-			s_video_decode_ip.u4_size = sizeof(fgcr_video_rewrite_ip_t);
+				s_video_decode_op.u4_size = sizeof(fgcr_video_rewrite_op_t);
 
-			s_video_decode_op.u4_size = sizeof(fgcr_video_rewrite_op_t);
+				/*****************************************************************************/
+				/*   API Call: Video Decode                                                  */
+				/*****************************************************************************/
 
-			/*****************************************************************************/
-			/*   API Call: Video Decode                                                  */
-			/*****************************************************************************/
+				GETTIME(&s_start_timer);
+				ret = ivd_api_function((iv_obj_t *)codec_obj, (void *)&s_video_decode_ip,
+					(void *)&s_video_decode_op);
 
-			GETTIME(&s_start_timer);
-			ret = ivd_api_function((iv_obj_t *)codec_obj, (void *)&s_video_decode_ip,
-				(void *)&s_video_decode_op);
+			/*************************************************************************/
+			/* Export FGC                                                            */
+			/*************************************************************************/
+			if (s_app_ctx.u1_mode == FGC_EXPORT)
+			{
+				static int fgc_count = 0;
+
+				fgcr_ctl_set_fgc_params_t *ps_fgc_export_prms;
+				fgcr_ctl_fgc_export_ip_t s_ctl_fgc_export_ip;
+				fgcr_ctl_fgc_export_op_t     s_ctl_fgc_export_op;
+				
+
+				fgcr_ctl_set_fgc_params_t ps_fgc_export_prms_default;
+				ps_fgc_export_prms_default = s_app_ctx.s_fgs_prms[0];
+				
+				ps_fgc_export_prms = &ps_fgc_export_prms_default;
+
+                s_ctl_fgc_export_ip.e_cmd = FGCR_CMD_VIDEO_CTL;
+                s_ctl_fgc_export_ip.e_sub_cmd = FGCR_CMD_CTL_EXPORT;
+				s_ctl_fgc_export_ip.ps_fgc_export_prms = ps_fgc_export_prms;
+				s_ctl_fgc_export_ip.u4_size = sizeof(fgcr_ctl_fgc_export_ip_t);
+
+				s_ctl_fgc_export_op.u4_size = sizeof(fgcr_ctl_fgc_export_op_t);
+
+				GETTIME(&s_start_timer);
+				ret = ivd_api_function((iv_obj_t *)codec_obj, (void *)&s_ctl_fgc_export_ip,
+					(void *)&s_ctl_fgc_export_op);
+
+				ps_fgc_export_prms = (fgcr_ctl_set_fgc_params_t *)s_ctl_fgc_export_op.ps_fgc_export_prms;
+
+				fprintf(ps_fgc_export_file, "----------------------------------------------------------------------\n");
+				fprintf(ps_fgc_export_file, "FGC %d \n", ++fgc_count);
+				fprintf(ps_fgc_export_file, "----------------------------------------------------------------------\n");
+				fprintf(ps_fgc_export_file, "film_grain_characteristics_cancel_flag %d \n", ps_fgc_export_prms->u1_film_grain_characteristics_cancel_flag);
+				fprintf(ps_fgc_export_file, "film_grain_model_id %d \n", ps_fgc_export_prms->u1_film_grain_model_id);
+				fprintf(ps_fgc_export_file, "separate_colour_description_present_flag %d \n", ps_fgc_export_prms->u1_separate_colour_description_present_flag);
+				if (ps_fgc_export_prms->u1_separate_colour_description_present_flag)
+				{
+					fprintf(ps_fgc_export_file, "film_grain_bit_depth_luma_minus8 %d \n", ps_fgc_export_prms->u1_film_grain_bit_depth_luma_minus8);
+					fprintf(ps_fgc_export_file, "film_grain_bit_depth_chroma_minus8 %d \n", ps_fgc_export_prms->u1_film_grain_bit_depth_chroma_minus8);
+					fprintf(ps_fgc_export_file, "film_grain_full_range_flag %d \n", ps_fgc_export_prms->u1_film_grain_full_range_flag);
+					fprintf(ps_fgc_export_file, "film_grain_colour_primaries %d \n", ps_fgc_export_prms->u1_film_grain_colour_primaries);
+					fprintf(ps_fgc_export_file, "film_grain_transfer_characteristics %d \n", ps_fgc_export_prms->u1_film_grain_transfer_characteristics);
+					fprintf(ps_fgc_export_file, "film_grain_matrix_coefficients %d \n", ps_fgc_export_prms->u1_film_grain_matrix_coefficients);
+				}
+				fprintf(ps_fgc_export_file, "u1_blending_mode_id %d \n", ps_fgc_export_prms->u1_blending_mode_id);
+				fprintf(ps_fgc_export_file, "u1_log2_scale_factor %d \n", ps_fgc_export_prms->u1_log2_scale_factor);
+				
+				for (int c = 0; c < 3; c++)
+				{
+					fprintf(ps_fgc_export_file, "comp_model_present_flag[%d] %d \n", c, ps_fgc_export_prms->u1_comp_model_present_flag[c]);
+				}
+
+				for (int c = 0; c < 3; c++)
+				{
+					if (ps_fgc_export_prms->u1_comp_model_present_flag[c])
+					{
+						fprintf(ps_fgc_export_file, "num_intensity_intervals_minus1[%d] %d \n", c, ps_fgc_export_prms->u1_num_intensity_intervals_minus1[c]);
+						fprintf(ps_fgc_export_file, "num_model_values_minus1[%d] %d \n", c, ps_fgc_export_prms->u1_num_model_values_minus1[c]);
+						for (int i = 0; i <= ps_fgc_export_prms->u1_num_intensity_intervals_minus1[c]; i++)
+						{
+							fprintf(ps_fgc_export_file, "intensity_interval_lower_bound[%d][%d] %d \n", c, i, ps_fgc_export_prms->u1_intensity_interval_lower_bound[c][i]);
+							fprintf(ps_fgc_export_file, "intensity_interval_upper_bound[%d][%d] %d \n", c, i, ps_fgc_export_prms->u1_intensity_interval_upper_bound[c][i]);
+							for (int j = 0; j <= ps_fgc_export_prms->u1_num_model_values_minus1[c]; j++)\
+							{
+								fprintf(ps_fgc_export_file, "comp_model_value[%d][%d][%d] %d \n", c, i, j, ps_fgc_export_prms->u4_comp_model_value[c][i][j]);
+							}
+						}
+					}
+				}
+
+                if (s_app_ctx.u1_codec == AVC)
+                {
+                    fprintf(ps_fgc_export_file, "u4_film_grain_characteristics_repetition_period %d \n", ps_fgc_export_prms->u4_film_grain_characteristics_repetition_period);
+                }
+                else if (s_app_ctx.u1_codec == HEVC)
+                {
+                    fprintf(ps_fgc_export_file, "u1_film_grain_characteristics_persistence_flag %d \n", ps_fgc_export_prms->u1_film_grain_characteristics_persistence_flag);
+                }
+				
+			}
 
 #ifdef PROFILE_ENABLE
 			if (s_app_ctx.u1_enable_logs)
@@ -1330,10 +1549,12 @@ int main(WORD32 argc, CHAR *argv[])
 	{
 		fclose(ps_ip_file);
 		fclose(ps_fgs_upd_file);
+		fclose(ps_fgc_export_file);
 	}
 
 	free(pu1_bs_buf);
 	free(pu1_bsu_buf);
+    free(ps_fgs_prms);
 
 	return (0);
 }

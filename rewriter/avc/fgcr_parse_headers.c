@@ -185,226 +185,423 @@ WORD32 ih264d_parse_nal_unit_for_rewriter(iv_obj_t *dec_hdl,
     fgcr_video_rewrite_op_t *ps_dec_op,
     UWORD8 *pu1_buf,
     UWORD8 **pu1_upd_buf,
-    UWORD32 u4_length)
+    UWORD32 u4_length,
+    UWORD32 u4_length_of_start_code,
+    FGCR_CODEC_T e_codec)
 {
     dec_bit_stream_t *ps_bitstrm;
     static WORD32 i4_bits_left_in_cw = WORD_SIZE;
     dec_struct_t *ps_dec = (dec_struct_t *)dec_hdl->pv_codec_handle;
-    UWORD8 u1_first_byte, u1_nal_ref_idc;
-    UWORD8 u1_nal_unit_type;
+    UWORD8 u1_first_byte, u1_second_byte, u1_nal_ref_idc;
+    UWORD8 u1_nal_unit_type, u1_nuh_temporal_id_plus1;
     WORD32 i_status = OK;
     ps_bitstrm = ps_dec->ps_bitstrm;
     UWORD8 *ps_upd_bitstrm = (UWORD8 *)ps_dec_op->pv_stream_out_buffer;
+    UWORD8 num_fgc = ps_dec->u1_num_fgc;
     if (pu1_buf)
     {
         if (u4_length)
         {
             ih264d_process_nal_unit(ps_dec->ps_bitstrm, pu1_buf,
-                u4_length);
+                u4_length, e_codec);
             u1_first_byte = ih264d_get_bits_h264(ps_bitstrm, 8);
+            if (e_codec == HEVC)
+            {
+                u1_second_byte = ih264d_get_bits_h264(ps_bitstrm, 8);
+            }
 
             if (NAL_FORBIDDEN_BIT(u1_first_byte))
             {
                 H264_DEC_DEBUG_PRINT("\nForbidden bit set in Nal Unit, Let's try\n");
             }
-            u1_nal_unit_type = NAL_UNIT_TYPE(u1_first_byte);
-            // if any other nal unit other than slice nal is encountered in between a
-            // frame break out of loop without consuming header
-            if ((ps_dec->u2_total_mbs_coded < (ps_dec->u2_total_mbs_coded)) &&
-				(u1_nal_unit_type > IDR_SLICE_NAL))
-			{
-                return ERROR_INCOMPLETE_FRAME;
+            if (e_codec == AVC)
+            {
+                u1_nal_unit_type = NAL_UNIT_TYPE_AVC(u1_first_byte);
             }
+            else if (e_codec == HEVC)
+            {
+                u1_nal_unit_type = NAL_UNIT_TYPE_HEVC(u1_first_byte);
+            }
+
             ps_dec->u1_nal_unit_type = u1_nal_unit_type;
-            u1_nal_ref_idc = (UWORD8)(NAL_REF_IDC(u1_first_byte));
-            //Skip all NALUs if SPS and PPS are not decoded
-            {
-                switch (u1_nal_unit_type)
-                {
-                case SEI_NAL:
-                    break;
-                case IDR_SLICE_NAL:
-                case SLICE_NAL:
-                    break;
-                default:
 
-                    *pu1_upd_buf += u4_length;
-                    ps_dec_op->u4_num_bytes_generated += u4_length;
-                    i4_bits_left_in_cw -= (u4_length << 3);
-                    while (i4_bits_left_in_cw <= 0)
-                    {
-                        i4_bits_left_in_cw += WORD_SIZE;
-                    }
-                    if (i4_bits_left_in_cw > 32)
-                    {
-                        //Do nothing
-                    }
-                    break;
-                }
+            if (e_codec == AVC)
+            {
+                u1_nal_ref_idc = (UWORD8)(NAL_REF_IDC(u1_first_byte));
             }
-            //else
+            if (e_codec == HEVC)
             {
-                switch (u1_nal_unit_type)
+                u1_nuh_temporal_id_plus1 = NUH_TEMPORAL_ID_PLUS1(u1_second_byte);
+                ps_dec->u1_nuh_temporal_id_plus1 = u1_nuh_temporal_id_plus1;
+            }
+
+            if (e_codec == AVC)
+            {
+                //Skip all NALUs if SPS and PPS are not decoded
                 {
-                case SLICE_DATA_PARTITION_A_NAL:
-                case SLICE_DATA_PARTITION_B_NAL:
-                case SLICE_DATA_PARTITION_C_NAL:
-                    if (!ps_dec->i4_decode_header)
-                        ih264d_parse_slice_partition(ps_dec, ps_bitstrm);
-
-                    break;
-
-                case IDR_SLICE_NAL:
-                case SLICE_NAL:
-
-                    /* ! */
-                    if (!ps_dec->i4_decode_header)
+                    switch (u1_nal_unit_type)
                     {
-                        if (ps_dec->i4_header_decoded == 3)
+                    case SEI_NAL:
+                        break;
+                    case IDR_SLICE_NAL:
+                    case SLICE_NAL:
+                        break;
+                    default:
+
+                        ps_dec->u1_fgc_present_before_idr_cra_flag = 0;
+                        *pu1_upd_buf += u4_length;
+                        ps_dec_op->u4_num_bytes_generated += u4_length;
+                        i4_bits_left_in_cw -= (u4_length << 3);
+                        while (i4_bits_left_in_cw <= 0)
                         {
-                            /* ! */
-                            ps_dec->u4_slice_start_code_found = 1;
+                            i4_bits_left_in_cw += WORD_SIZE;
+                        }
+                        if (i4_bits_left_in_cw > 32)
+                        {
+                            //Do nothing
+                        }
+                        break;
+                    }
+                }
+                {
+                    switch (u1_nal_unit_type)
+                    {
+                    case SLICE_DATA_PARTITION_A_NAL:
+                    case SLICE_DATA_PARTITION_B_NAL:
+                    case SLICE_DATA_PARTITION_C_NAL:
+                        if (!ps_dec->i4_decode_header)
+                            ih264d_parse_slice_partition(ps_dec, ps_bitstrm);
 
-                            ih264d_rbsp_to_sodb(ps_dec->ps_bitstrm);
+                        break;
 
-                            i_status = ih264d_detect_first_mb_slice(
-                                (UWORD8)(u1_nal_unit_type
-                                    == IDR_SLICE_NAL),
-                                u1_nal_ref_idc, ps_dec);
-                            if (ps_dec->u4_first_slice_in_pic != 0)
+                    case IDR_SLICE_NAL:
+                    case SLICE_NAL:
+                        /* ! */
+                        if (!ps_dec->i4_decode_header)
+                        {
+                            if (ps_dec->i4_header_decoded == 3)
                             {
-                                /*  if the first slice header was not valid set to 1 */
-                                ps_dec->u4_first_slice_in_pic = 1;
-                            }
+                                /* ! */
+                                ps_dec->u4_slice_start_code_found = 1;
 
-                            if (i_status != OK)
-                            {
-                                return i_status;
-                            }
-                            if ((ps_dec->u2_first_mb_in_slice == 0) && (ps_dec->u4_fgs_enable_rewriter))
-                            {
-                                ps_dec->frm_counts++;
-                                if (ps_dec->frm_counts == ps_dec->frm_SEI_counts)
+                                ih264d_rbsp_to_sodb(ps_dec->ps_bitstrm);
+
+                                i_status = ih264d_detect_first_mb_slice(
+                                    (UWORD8)(u1_nal_unit_type
+                                        == IDR_SLICE_NAL),
+                                    u1_nal_ref_idc, ps_dec);
+                                if (ps_dec->u4_first_slice_in_pic != 0)
                                 {
-                                    *pu1_upd_buf += u4_length;
-                                    ps_dec_op->u4_num_bytes_generated += u4_length;
-                                    i4_bits_left_in_cw -= (u4_length << 3);
-                                    while (i4_bits_left_in_cw <= 0)
-                                    {
-                                        i4_bits_left_in_cw += WORD_SIZE;
-                                    }
+                                    /*  if the first slice header was not valid set to 1 */
+                                    ps_dec->u4_first_slice_in_pic = 1;
                                 }
-                                //Either SEI or FGS is not present
-                                else if ((ps_dec->frm_counts - 1) == ps_dec->frm_SEI_counts)
+
+                                if (i_status != OK)
                                 {
-                                    UWORD8 *temp_holder = ps_dec->temp_mem_holder;
-                                    memcpy(temp_holder, *pu1_upd_buf - 4, u4_length + 4);
-                                    bitstrm_t ps_bitstream;
-                                    ps_bitstream.pu1_strm_buffer = *pu1_upd_buf;
-                                    ps_bitstream.u4_strm_buf_offset = 0;
-                                    ps_bitstream.u4_cur_word = 0;
-                                    ps_bitstream.i4_bits_left_in_cw = WORD_SIZE;
-                                    ps_bitstream.i4_zero_bytes_run = 0;
-                                    ps_bitstream.u4_max_strm_size = 10000;
-                                    i_status = i264_generate_sei_message(&ps_bitstream,
-										ps_dec->s_fgs_rewrite_prms);
-                                    if (i_status != OK)
+                                    return i_status;
+                                }
+                                if ((ps_dec->u2_first_mb_in_slice == 0) && (ps_dec->u4_fgs_enable_rewriter))
+                                {
+                                    ps_dec->frm_counts++;
+                                    if (ps_dec->u1_fgc_present_before_idr_cra_flag == 1)
                                     {
-                                        return i_status;
+                                        *pu1_upd_buf += u4_length;
+                                        ps_dec_op->u4_num_bytes_generated += u4_length;
+                                        i4_bits_left_in_cw -= (u4_length << 3);
+                                        while (i4_bits_left_in_cw <= 0)
+                                        {
+                                            i4_bits_left_in_cw += WORD_SIZE;
+                                        }
                                     }
-                                    *pu1_upd_buf += ps_bitstream.u4_strm_buf_offset;
-                                    ps_dec->frm_SEI_counts++;
-                                    memcpy(*pu1_upd_buf, temp_holder, u4_length + 4);
-                                    *pu1_upd_buf += u4_length + 4;
-                                    ps_dec_op->u4_num_bytes_generated +=
-										u4_length + 4 + ps_bitstream.u4_strm_buf_offset;
+                                    //Either SEI or FGS is not present
+                                    else
+                                    {
+                                        UWORD8 *temp_holder = ps_dec->temp_mem_holder;
+                                        memcpy(temp_holder, *pu1_upd_buf - 4, u4_length + 4);
+                                        bitstrm_t ps_bitstream;
+                                        ps_bitstream.pu1_strm_buffer = *pu1_upd_buf;
+                                        ps_bitstream.u4_strm_buf_offset = 0;
+                                        ps_bitstream.u4_cur_word = 0;
+                                        ps_bitstream.i4_bits_left_in_cw = WORD_SIZE;
+                                        ps_bitstream.i4_zero_bytes_run = 0;
+                                        ps_bitstream.u4_max_strm_size = 10000;
+                                        i_status = i264_generate_sei_message(&ps_bitstream,
+                                            (ps_dec->s_fgs_rewrite_prms + (ps_dec->frm_SEI_counts%num_fgc)));
+                                        if (i_status != OK)
+                                        {
+                                            return i_status;
+                                        }
+                                        *pu1_upd_buf += ps_bitstream.u4_strm_buf_offset;
+                                        ps_dec->frm_SEI_counts++;
+                                        memcpy(*pu1_upd_buf, temp_holder, u4_length + 4);
+                                        *pu1_upd_buf += u4_length + 4;
+                                        ps_dec_op->u4_num_bytes_generated +=
+                                            u4_length + 4 + ps_bitstream.u4_strm_buf_offset;
+                                    }
                                 }
                                 else
                                 {
-                                    return NOT_OK;
+                                    ps_dec_op->u4_num_bytes_generated += u4_length;
+                                    *pu1_upd_buf += u4_length;
+                                }
+                                if (ps_dec->u2_first_mb_in_slice == 0)
+                                {
+                                    ps_dec->is_fgs_rewrite_succ = 1;
                                 }
                             }
                             else
                             {
-                                ps_dec_op->u4_num_bytes_generated += u4_length;
+                                H264_DEC_DEBUG_PRINT(
+                                    "\nSlice NAL Supplied but no header has been supplied\n");
                                 *pu1_upd_buf += u4_length;
+                                ps_dec_op->u4_num_bytes_generated += u4_length;
                             }
-                            if (ps_dec->u2_first_mb_in_slice == 0)
+                        }
+                        else
+                        {
+                            *pu1_upd_buf += u4_length;
+                            ps_dec_op->u4_num_bytes_generated += u4_length;
+                        }
+                        ps_dec->u1_fgc_present_before_idr_cra_flag = 0;
+                        break;
+
+                    case SEI_NAL:
+                        if (!ps_dec->i4_decode_header)
+                        {
+                            ih264d_rbsp_to_sodb(ps_dec->ps_bitstrm);
+                            ps_dec->ps_u1_upd_buf = *pu1_upd_buf;
+                            i_status = ih264d_parse_sei_message(ps_dec, ps_bitstrm);
+                            if (i_status != OK)
+                                return i_status;
+
+                            if (ps_dec->u4_num_bytes_updated != 0)
                             {
-                                ps_dec->is_fgs_rewrite_succ = 1;
+                                *pu1_upd_buf += ps_dec->u4_num_bytes_updated;
+                                ps_dec_op->u4_num_bytes_generated += ps_dec->u4_num_bytes_updated;
+                            }
+                            else
+                            {
+                                *pu1_upd_buf += u4_length;
+                                ps_dec_op->u4_num_bytes_generated += u4_length;
                             }
                         }
                         else
                         {
-                            H264_DEC_DEBUG_PRINT(
-                                "\nSlice NAL Supplied but no header has been supplied\n");
                             *pu1_upd_buf += u4_length;
                             ps_dec_op->u4_num_bytes_generated += u4_length;
                         }
+                        break;
+
+                    case SEQ_PARAM_NAL:
+                        ps_dec->i4_header_decoded |= 0x1;
+                        break;
+
+                    case PIC_PARAM_NAL:
+                        ps_dec->i4_header_decoded |= 0x2;
+                        break;
+                    case ACCESS_UNIT_DELIMITER_RBSP:
+                        if (!ps_dec->i4_decode_header)
+                        {
+                            ih264d_access_unit_delimiter_rbsp(ps_dec);
+                        }
+                        break;
+                        //Let us ignore the END_OF_SEQ_RBSP NAL and decode even after this NAL
+                    case END_OF_STREAM_RBSP:
+                        if (!ps_dec->i4_decode_header)
+                        {
+                            ih264d_parse_end_of_stream(ps_dec);
+                        }
+                        break;
+                    case FILLER_DATA_NAL:
+                        if (!ps_dec->i4_decode_header)
+                        {
+                            ih264d_parse_filler_data(ps_dec, ps_bitstrm);
+                        }
+                        break;
+                    default:
+                        H264_DEC_DEBUG_PRINT("\nUnknown NAL type %d\n", u1_nal_unit_type);
+                        break;
                     }
-                    else
+                }
+            }
+            else if (e_codec == HEVC)
+            {
+                //Skip all NALUs if SPS and PPS are not decoded
+                {
+                    switch (u1_nal_unit_type)
                     {
+                    case NAL_PREFIX_SEI:
+                        break;
+
+                    case NAL_IDR_W_LP:
+                    case NAL_IDR_N_LP:
+                    case NAL_CRA:
+                        break;
+
+                    default:
+                        ps_dec->u1_fgc_present_before_idr_cra_flag = 0;
                         *pu1_upd_buf += u4_length;
                         ps_dec_op->u4_num_bytes_generated += u4_length;
-                    }
-                    break;
-
-                case SEI_NAL:
-                    if (!ps_dec->i4_decode_header)
-                    {
-                        ih264d_rbsp_to_sodb(ps_dec->ps_bitstrm);
-                        ps_dec->ps_u1_upd_buf = *pu1_upd_buf;
-                        i_status = ih264d_parse_sei_message(ps_dec, ps_bitstrm);
-                        if (i_status != OK)
-                            return i_status;
-
-                        if (ps_dec->u4_num_bytes_updated != 0)
+                        i4_bits_left_in_cw -= (u4_length << 3);
+                        while (i4_bits_left_in_cw <= 0)
                         {
-                            *pu1_upd_buf += ps_dec->u4_num_bytes_updated;
-                            ps_dec_op->u4_num_bytes_generated += ps_dec->u4_num_bytes_updated;
+                            i4_bits_left_in_cw += WORD_SIZE;
+                        }
+                        if (i4_bits_left_in_cw > 32)
+                        {
+                            //Do nothing
+                        }
+                        break;
+                    }
+                }
+                {
+                    switch (u1_nal_unit_type)
+                    {
+                    case NAL_IDR_W_LP:
+                    case NAL_IDR_N_LP:
+                    case NAL_CRA:
+                        /* ! */
+                        if (!ps_dec->i4_decode_header)
+                        {
+                            if (ps_dec->i4_header_decoded == 3)
+                            {
+                                /* ! */
+                                ps_dec->u4_slice_start_code_found = 1;
+
+                                ih264d_rbsp_to_sodb(ps_dec->ps_bitstrm);
+                                i_status = ihevcd_detect_first_slice_segment_in_pic(ps_dec);
+                                if (ps_dec->u4_first_slice_in_pic != 0)
+                                {
+                                    /*  if the first slice header was not valid set to 1 */
+                                    ps_dec->u4_first_slice_in_pic = 1;
+                                }
+
+                                if (i_status != OK)
+                                {
+                                    return i_status;
+                                }
+                                if ((ps_dec->u1_first_slice_segment_in_pic_flag == 1) && (ps_dec->u4_fgs_enable_rewriter))
+                                {
+                                    ps_dec->frm_counts++;
+                                    if (ps_dec->u1_fgc_present_before_idr_cra_flag == 1)
+                                    {
+                                        *pu1_upd_buf += u4_length;
+                                        ps_dec_op->u4_num_bytes_generated += u4_length;
+                                        i4_bits_left_in_cw -= (u4_length << 3);
+                                        while (i4_bits_left_in_cw <= 0)
+                                        {
+                                            i4_bits_left_in_cw += WORD_SIZE;
+                                        }
+                                    }
+                                    //Either SEI or FGS is not present
+                                    else
+                                    {
+                                        UWORD8 *temp_holder = ps_dec->temp_mem_holder;
+                                        memcpy(temp_holder, *pu1_upd_buf - u4_length_of_start_code, u4_length + u4_length_of_start_code);
+                                        bitstrm_t ps_bitstream;
+                                        ps_bitstream.pu1_strm_buffer = *pu1_upd_buf;
+                                        ps_bitstream.u4_strm_buf_offset = 0;
+                                        ps_bitstream.u4_cur_word = 0;
+                                        ps_bitstream.i4_bits_left_in_cw = WORD_SIZE;
+                                        ps_bitstream.i4_zero_bytes_run = 0;
+                                        ps_bitstream.u4_max_strm_size = 10000;
+                                        i_status = i265_generate_sei_message(&ps_bitstream,
+                                            (ps_dec->s_fgs_rewrite_prms + (ps_dec->frm_SEI_counts%num_fgc)), 0);
+                                        if (i_status != OK)
+                                        {
+                                            return i_status;
+                                        }
+                                        *pu1_upd_buf += ps_bitstream.u4_strm_buf_offset;
+                                        ps_dec->frm_SEI_counts++;
+                                        memcpy(*pu1_upd_buf, temp_holder, u4_length + 4);
+                                        *pu1_upd_buf += u4_length + 4;
+                                        ps_dec_op->u4_num_bytes_generated +=
+                                            u4_length + 4 + ps_bitstream.u4_strm_buf_offset;
+                                    }
+                                }
+                                else
+                                {
+                                    ps_dec_op->u4_num_bytes_generated += u4_length;
+                                    *pu1_upd_buf += u4_length;
+                                }
+                                if (ps_dec->u1_first_slice_segment_in_pic_flag == 1)
+                                {
+                                    ps_dec->is_fgs_rewrite_succ = 1;
+                                }
+                            }
+                            else
+                            {
+                                H264_DEC_DEBUG_PRINT(
+                                    "\nSlice NAL Supplied but no header has been supplied\n");
+                                *pu1_upd_buf += u4_length;
+                                ps_dec_op->u4_num_bytes_generated += u4_length;
+                            }
                         }
                         else
                         {
                             *pu1_upd_buf += u4_length;
                             ps_dec_op->u4_num_bytes_generated += u4_length;
                         }
-                    }
-                    else
-                    {
-                        *pu1_upd_buf += u4_length;
-                        ps_dec_op->u4_num_bytes_generated += u4_length;
-                    }
-                    break;
+                        ps_dec->u1_fgc_present_before_idr_cra_flag = 0;
+                        break;
 
-                case SEQ_PARAM_NAL:
+                    case NAL_PREFIX_SEI:
+                        if (!ps_dec->i4_decode_header)
+                        {
+                            ih264d_rbsp_to_sodb(ps_dec->ps_bitstrm);
+                            ps_dec->ps_u1_upd_buf = *pu1_upd_buf;
+                            i_status = ih264d_parse_sei_message(ps_dec, ps_bitstrm);
+                            if (i_status != OK)
+                                return i_status;
+
+                            if (ps_dec->u4_num_bytes_updated != 0)
+                            {
+                                *pu1_upd_buf += ps_dec->u4_num_bytes_updated;
+                                ps_dec_op->u4_num_bytes_generated += ps_dec->u4_num_bytes_updated;
+                            }
+                            else
+                            {
+                                *pu1_upd_buf += u4_length;
+                                ps_dec_op->u4_num_bytes_generated += u4_length;
+                            }
+                        }
+                        else
+                        {
+                            *pu1_upd_buf += u4_length;
+                            ps_dec_op->u4_num_bytes_generated += u4_length;
+                        }
+                        break;
+
+                    case NAL_SPS:
                         ps_dec->i4_header_decoded |= 0x1;
-                    break;
+                        break;
 
-                case PIC_PARAM_NAL:
+                    case NAL_PPS:
                         ps_dec->i4_header_decoded |= 0x2;
-                    break;
-                case ACCESS_UNIT_DELIMITER_RBSP:
-                    if (!ps_dec->i4_decode_header)
-                    {
-                        ih264d_access_unit_delimiter_rbsp(ps_dec);
+                        break;
+                    case NAL_AUD:
+                        if (!ps_dec->i4_decode_header)
+                        {
+                            ih264d_access_unit_delimiter_rbsp(ps_dec);
+                        }
+                        break;
+                        //Let us ignore the END_OF_SEQ_RBSP NAL and decode even after this NAL
+                    case NAL_EOS:
+                        if (!ps_dec->i4_decode_header)
+                        {
+                            ih264d_parse_end_of_stream(ps_dec);
+                        }
+                        break;
+                    case NAL_FD:
+                        if (!ps_dec->i4_decode_header)
+                        {
+                            ih264d_parse_filler_data(ps_dec, ps_bitstrm);
+                        }
+                        break;
+                    default:
+                        H264_DEC_DEBUG_PRINT("\nUnknown NAL type %d\n", u1_nal_unit_type);
+                        break;
                     }
-                    break;
-                    //Let us ignore the END_OF_SEQ_RBSP NAL and decode even after this NAL
-                case END_OF_STREAM_RBSP:
-                    if (!ps_dec->i4_decode_header)
-                    {
-                        ih264d_parse_end_of_stream(ps_dec);
-                    }
-                    break;
-                case FILLER_DATA_NAL:
-                    if (!ps_dec->i4_decode_header)
-                    {
-                        ih264d_parse_filler_data(ps_dec, ps_bitstrm);
-                    }
-                    break;
-                default:
-                    H264_DEC_DEBUG_PRINT("\nUnknown NAL type %d\n", u1_nal_unit_type);
-                    break;
                 }
             }
         }

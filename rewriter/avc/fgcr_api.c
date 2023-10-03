@@ -368,6 +368,34 @@ static IV_API_CALL_STATUS_T api_check_struct_sanity(iv_obj_t *ps_handle,
 		}
 		case FGCR_CMD_CTL_SET_FGS_FOR_REWRITE:
 			break;
+
+        case FGCR_CMD_CTL_EXPORT:
+        {
+            fgcr_ctl_fgc_export_ip_t *ps_ip = (fgcr_ctl_fgc_export_ip_t *)pv_api_ip;
+            fgcr_ctl_fgc_export_op_t *ps_op = (fgcr_ctl_fgc_export_op_t *)pv_api_op;
+
+            ps_op->u4_error_code = 0;
+
+            if (ps_ip->u4_size != sizeof(fgcr_ctl_fgc_export_ip_t))
+            {
+                ps_op->u4_error_code |= 1
+                    << FGCR_UNSUPPORTEDPARAM;
+                ps_op->u4_error_code |=
+                    FGCR_IP_API_STRUCT_SIZE_INCORRECT;
+                return (IV_FAIL);
+            }
+
+            if (ps_op->u4_size != sizeof(fgcr_ctl_fgc_export_op_t))
+            {
+                ps_op->u4_error_code |= 1
+                    << FGCR_UNSUPPORTEDPARAM;
+                ps_op->u4_error_code |=
+                    FGCR_OP_API_STRUCT_SIZE_INCORRECT;
+                return (IV_FAIL);
+            }
+        }
+        break;
+
 		default:
 			*(pu4_api_op + 1) |= 1 << FGCR_UNSUPPORTEDPARAM;
 			*(pu4_api_op + 1) |= FGCR_UNSUPPORTED_API_CMD;
@@ -457,6 +485,7 @@ WORD32 fgcr_free_bufs(iv_obj_t *dec_hdl)
 	PS_DEC_ALIGNED_FREE(ps_dec, ps_dec->ps_bitstrm);
 	PS_DEC_ALIGNED_FREE(ps_dec, ps_dec->pu1_bits_buf);
 	PS_DEC_ALIGNED_FREE(ps_dec, ps_dec->temp_mem_holder);
+    PS_DEC_ALIGNED_FREE(ps_dec, ps_dec->s_fgs_rewrite_prms);
 
 	PS_DEC_ALIGNED_FREE(ps_dec, dec_hdl->pv_codec_handle);
 
@@ -672,6 +701,7 @@ IV_API_CALL_STATUS_T fgcr_video_rewrite(iv_obj_t *dec_hdl, void *pv_api_ip, void
 	WORD32 ret = 0;
 	IV_API_CALL_STATUS_T api_ret_value = IV_SUCCESS;
 	WORD32 header_data_left = 0, frame_data_left = 0;
+	FGCR_CODEC_T e_codec = ps_dec->e_codec;
 	UWORD8 *pu1_bitstrm_buf;
 	UWORD8 *pu1_upd_bitstrm_buf;
 	fgcr_video_rewrite_ip_t    *ps_h264_dec_ip;
@@ -764,7 +794,7 @@ IV_API_CALL_STATUS_T fgcr_video_rewrite(iv_obj_t *dec_hdl, void *pv_api_ip, void
 
 		buflen = ih264d_find_start_code(pu1_buf, 0, u4_max_ofst,
 			&u4_length_of_start_code,
-			&u4_next_is_aud);
+			&u4_next_is_aud, e_codec);
 
 		if (buflen == -1)
 		{
@@ -818,7 +848,7 @@ IV_API_CALL_STATUS_T fgcr_video_rewrite(iv_obj_t *dec_hdl, void *pv_api_ip, void
 
 		ps_dec_op->pv_stream_out_buffer = ps_dec_ip->pv_stream_out_buffer;
 
-		ret = ih264d_parse_nal_unit_for_rewriter(dec_hdl, ps_dec_op, pu1_bitstrm_buf, &pu1_upd_bitstrm_buf, buflen);
+		ret = ih264d_parse_nal_unit_for_rewriter(dec_hdl, ps_dec_op, pu1_bitstrm_buf, &pu1_upd_bitstrm_buf, buflen, u4_length_of_start_code, e_codec);
 
 		if (ret != OK)
 		{
@@ -857,6 +887,73 @@ IV_API_CALL_STATUS_T fgcr_video_rewrite(iv_obj_t *dec_hdl, void *pv_api_ip, void
 		ps_dec_op->u4_num_bytes_consumed);
 	return api_ret_value;
 }
+
+IV_API_CALL_STATUS_T fgcr_export(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_api_op)
+{
+    IV_API_CALL_STATUS_T api_ret_value = IV_SUCCESS;
+
+    dec_struct_t * ps_dec = (dec_struct_t *)(dec_hdl->pv_codec_handle);
+    fgcr_ctl_fgc_export_ip_t *ps_h264_dec_ip;
+    fgcr_ctl_fgc_export_op_t *ps_h264_dec_op;
+
+    ps_h264_dec_ip = (fgcr_ctl_fgc_export_ip_t *)pv_api_ip;
+    ps_h264_dec_op = (fgcr_ctl_fgc_export_ip_t *)pv_api_op;
+
+    sei *ps_sei = ps_dec->ps_sei;
+    ps_h264_dec_op->ps_fgc_export_prms = ps_h264_dec_ip->ps_fgc_export_prms;
+
+    fgcr_ctl_set_fgc_params_t *fgc_export_params;
+    fgc_export_params = ps_h264_dec_op->ps_fgc_export_prms;
+
+    fgc_export_params->u1_film_grain_characteristics_cancel_flag = ps_sei->s_fgc_params.u1_film_grain_characteristics_cancel_flag;
+    fgc_export_params->u1_film_grain_model_id = ps_sei->s_fgc_params.u1_film_grain_model_id;
+    fgc_export_params->u1_separate_colour_description_present_flag = ps_sei->s_fgc_params.u1_separate_colour_description_present_flag;
+    if (fgc_export_params->u1_separate_colour_description_present_flag)
+    {
+        fgc_export_params->u1_film_grain_bit_depth_luma_minus8 = ps_sei->s_fgc_params.u1_film_grain_bit_depth_luma_minus8;
+        fgc_export_params->u1_film_grain_bit_depth_chroma_minus8 = ps_sei->s_fgc_params.u1_film_grain_bit_depth_chroma_minus8;
+        fgc_export_params->u1_film_grain_full_range_flag = ps_sei->s_fgc_params.u1_film_grain_full_range_flag;
+        fgc_export_params->u1_film_grain_colour_primaries = ps_sei->s_fgc_params.u1_film_grain_colour_primaries;
+        fgc_export_params->u1_film_grain_transfer_characteristics = ps_sei->s_fgc_params.u1_film_grain_transfer_characteristics;
+        fgc_export_params->u1_film_grain_matrix_coefficients = ps_sei->s_fgc_params.u1_film_grain_matrix_coefficients;
+    }
+    fgc_export_params->u1_blending_mode_id = ps_sei->s_fgc_params.u1_blending_mode_id;
+    fgc_export_params->u1_log2_scale_factor = ps_sei->s_fgc_params.u1_log2_scale_factor;
+
+    for (int c = 0; c < 3; c++)
+    {
+        fgc_export_params->u1_comp_model_present_flag[c] = ps_sei->s_fgc_params.au1_comp_model_present_flag[c];
+    }
+    for (int c = 0; c < 3; c++)
+    {
+        if (fgc_export_params->u1_comp_model_present_flag[c])
+        {
+            fgc_export_params->u1_num_intensity_intervals_minus1[c] = ps_sei->s_fgc_params.au1_num_intensity_intervals_minus1[c];
+            fgc_export_params->u1_num_model_values_minus1[c] = ps_sei->s_fgc_params.au1_num_model_values_minus1[c];
+            for (int i = 0; i <= fgc_export_params->u1_num_intensity_intervals_minus1[c]; i++)
+            {
+                fgc_export_params->u1_intensity_interval_lower_bound[c][i] = ps_sei->s_fgc_params.au1_intensity_interval_lower_bound[c][i];
+                fgc_export_params->u1_intensity_interval_upper_bound[c][i] = ps_sei->s_fgc_params.au1_intensity_interval_upper_bound[c][i];
+                for (int j = 0; j <= fgc_export_params->u1_num_model_values_minus1[c]; j++)\
+                {
+                    fgc_export_params->u4_comp_model_value[c][i][j] = ps_sei->s_fgc_params.ai4_comp_model_value[c][i][j];
+                }
+            }
+        }
+    }
+
+    if (ps_dec->e_codec == AVC)
+    {
+        fgc_export_params->u4_film_grain_characteristics_repetition_period = ps_sei->s_fgc_params.u4_film_grain_characteristics_repetition_period;
+    }
+    else if(ps_dec->e_codec == HEVC)
+    {
+        fgc_export_params->u1_film_grain_characteristics_persistence_flag = ps_sei->s_fgc_params.u1_film_grain_characteristics_persistence_flag;
+    }
+
+    return api_ret_value;
+}
+
 
 IV_API_CALL_STATUS_T fgcr_get_version(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_api_op)
 {
@@ -921,9 +1018,18 @@ IV_API_CALL_STATUS_T fgcr_set_params(iv_obj_t *dec_hdl, void *pv_api_ip, void *p
 	ps_ctl_op->u4_error_code = 0;
 
 	ps_dec->i4_decode_header = 0;
+    ps_dec->e_codec = ps_ctl_ip->e_codec;
+    if (ps_dec->e_codec != AVC && ps_dec->e_codec != HEVC)
+    {
+        ps_ctl_op->u4_error_code |= 1 << FGCR_UNSUPPORTEDPARAM;
+        ps_ctl_op->u4_error_code |= ERROR_UNSUPPORTED_CODEC;
+        ret = IV_FAIL;
+    }
+    ps_dec->u1_num_fgc = ps_ctl_ip->u1_num_fgc;
 
 	return ret;
 }
+
 
 /*****************************************************************************/
 /*                                                                           */
@@ -999,6 +1105,9 @@ IV_API_CALL_STATUS_T fgcr_ctl(iv_obj_t *dec_hdl, void *pv_api_ip, void *pv_api_o
 	case FGCR_CMD_CTL_SET_FGS_FOR_REWRITE:
 		ret = fgcr_set_fgs_rewrite_params(dec_hdl, (void *)pv_api_ip, (void *)pv_api_op);
 		break;
+    case FGCR_CMD_CTL_EXPORT:
+        ret = fgcr_export(dec_hdl, (void *)pv_api_ip, (void *)pv_api_op);
+        break;
 	default:
 		H264_DEC_DEBUG_PRINT("\ndo nothing\n");
 		break;
@@ -1236,12 +1345,6 @@ WORD32 error_check_FGS(fgcr_set_fgc_params_t *ps_fgc_param)
 				}
 			}
 		}
-
-		if (0 != ps_fgc_param->u4_film_grain_characteristics_repetition_period)
-		{
-			printf("Error: Invalid value for film_grain_characteristics_repetition_period");
-			return IV_FAIL;
-		}
 	}
 	return 0;
 }
@@ -1253,18 +1356,30 @@ IV_API_CALL_STATUS_T fgcr_set_fgs_rewrite_params(
 {
 	fgcr_ctl_fgs_rewrite_params_ip_t *ps_ip;
 	fgcr_ctl_set_fgs_params_op_t     *ps_op;
+    void *(*pf_aligned_alloc)(void *pv_mem_ctxt, WORD32 alignment, WORD32 size);
+    void *pv_mem_ctxt;
+    void *pv_buf;
 	dec_struct_t *ps_dec = (dec_struct_t *)dec_hdl->pv_codec_handle;
 	WORD32 i_status = IV_SUCCESS;
 	ps_ip = (fgcr_ctl_fgs_rewrite_params_ip_t *)pv_api_ip;
 	ps_op = (fgcr_ctl_set_fgs_params_op_t *)pv_api_op;
+
+    pf_aligned_alloc = ps_ip->pf_aligned_alloc;
+    pv_mem_ctxt = ps_ip->pv_mem_ctxt;
 
 	ps_op->u4_error_code = ERROR_UNSUPPORTED_SEI_FGS_REWRITE_PARAMS;
 	switch ((FGCR_CMD_CTL_SUB_CMDS)ps_ip->e_sub_cmd)
 	{
 	case FGCR_CMD_CTL_SET_FGS_FOR_REWRITE:
 	{
-		ps_dec->s_fgs_rewrite_prms = (fgcr_set_fgc_params_t*)ps_ip->ps_fgs_rewrite_prms;
-		i_status = error_check_FGS(ps_dec->s_fgs_rewrite_prms);
+        pv_buf = pf_aligned_alloc(pv_mem_ctxt, 128, ps_dec->u1_num_fgc * sizeof(fgcr_set_fgc_params_t));
+        RETURN_IF((NULL == pv_buf), IV_FAIL);
+        ps_dec->s_fgs_rewrite_prms = (fgcr_set_fgc_params_t*)pv_buf;
+        memcpy(ps_dec->s_fgs_rewrite_prms, (fgcr_set_fgc_params_t*)ps_ip->ps_fgs_rewrite_prms, ps_dec->u1_num_fgc * sizeof(fgcr_set_fgc_params_t));
+		for (int i = 0; i < ps_dec->u1_num_fgc; i++)
+		{
+			i_status = error_check_FGS(ps_dec->s_fgs_rewrite_prms + i);
+		}
 		ps_op->u4_error_code = i_status;
 	}
 		break;

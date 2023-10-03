@@ -92,6 +92,7 @@ typedef struct
 	UWORD8 au1_intensity_interval_upper_bound[SEI_FGC_NUM_COLOUR_COMPONENTS][SEI_FGC_MAX_NUM_INTENSITY_INTERVALS];
 	WORD32 ai4_comp_model_value[SEI_FGC_NUM_COLOUR_COMPONENTS][SEI_FGC_MAX_NUM_INTENSITY_INTERVALS][SEI_FGC_MAX_NUM_MODEL_VALUES];
 	UWORD32 u4_film_grain_characteristics_repetition_period;
+	UWORD8 u1_film_grain_characteristics_persistence_flag;
 
 }sei_fgc_params_t;
 
@@ -126,11 +127,14 @@ typedef struct
     UWORD8 u1_intensity_interval_upper_bound[MAX_NUM_COMP][MAX_NUM_INTENSITIES];
     /* Component model values for each intensity interval */
     UWORD32 u4_comp_model_value[MAX_NUM_COMP][MAX_NUM_INTENSITIES][MAX_NUM_MODEL_VALUES];
-    /* To be 0:  Persistence of the film grain characteristics */
+    /* Repetition period of the film grain characteristics in AVC codec*/
     UWORD32 u4_film_grain_characteristics_repetition_period;
+    /* To be 0:  Persistence of the film grain characteristics in HEVC codec*/
+    UWORD8 u1_film_grain_characteristics_persistence_flag;
 }fgcr_set_fgc_params_t;
 
 WORD32 i264_generate_sei_message(bitstrm_t *ps_bitstrm, fgcr_set_fgc_params_t *ps_fgs_prms);
+WORD32 i265_generate_sei_message(bitstrm_t *ps_bitstrm, fgcr_set_fgc_params_t *ps_fgs_prms, UWORD8 num_temporal_id_plus1);
 
 struct _sei
 {
